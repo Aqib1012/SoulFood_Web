@@ -278,7 +278,7 @@ def show_header():
 
     st.markdown("<h1 class='title'>🎵 SoulFood – پرستش 🎵</h1>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='center' style='font-size:16px;'>Gospel Music Player –</p>",
+        "<p class='center' style='font-size:16px;'>Gospel Music Player</p>",
         unsafe_allow_html=True,
     )
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
