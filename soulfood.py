@@ -12,9 +12,14 @@ st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
 # ---- Hide Streamlit Branding (Footer + Header + Menu Icon) ----
 hide_streamlit_style = """
     <style>
-    #MainMenu {visibility: hidden;}     /* Hides the hamburger menu */
-    header {visibility: hidden;}        /* Hides Streamlit header */
-    footer {visibility: hidden;}        /* Hides 'Made with Streamlit' footer */
+    /* Hide Streamlit Branding Only (Safe for Mobile) */
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+
+    /* DO NOT HIDE MainMenu this way – it breaks mobile */
+    /* Instead do this: */
+    [data-testid="main-menu"] {display: none !important;}
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -297,7 +302,6 @@ def show_singers():
     - Wahan se **Upload Song / Admin Panel** ka option milega.  
     """)
 
-    st.markdown("<h3 class='subtitle'>Select a Singer</h3>", unsafe_allow_html=True)
     st.markdown("<h3 class='subtitle'>Select a Singer</h3>", unsafe_allow_html=True)
     st.markdown('<div class="singer-row">', unsafe_allow_html=True)
 
