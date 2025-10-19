@@ -290,6 +290,14 @@ def show_header():
 # ---------------------- VIEWS ----------------------
 def show_singers():
     show_header()
+    # ✅ Add this here:
+    st.info("""
+    📱 **Mobile Users:**  
+    - Top left corner par **≡ icon** ko tap karein.  
+    - Wahan se **Upload Song / Admin Panel** ka option milega.  
+    """)
+
+    st.markdown("<h3 class='subtitle'>Select a Singer</h3>", unsafe_allow_html=True)
     st.markdown("<h3 class='subtitle'>Select a Singer</h3>", unsafe_allow_html=True)
     st.markdown('<div class="singer-row">', unsafe_allow_html=True)
 
