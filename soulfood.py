@@ -8,6 +8,48 @@ from streamlit_autorefresh import st_autorefresh
 
 # ---------------------- CONFIG ----------------------
 st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
+# ✅ Custom Sidebar Toggle Button for Mobile
+toggle_sidebar_js = """
+    <script>
+        function toggleSidebar() {
+            var sidebar = parent.document.querySelector('section[data-testid="stSidebar"]');
+            if (sidebar.style.transform === 'translateX(-100%)') {
+                sidebar.style.transform = 'translateX(0)';
+            } else {
+                sidebar.style.transform = 'translateX(-100%)';
+            }
+        }
+    </script>
+
+    <style>
+        /* Floating Toggle Button */
+        .sidebar-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 14px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        /* Initially hide the sidebar on mobile */
+        @media (max-width: 768px) {
+            section[data-testid="stSidebar"] {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+            }
+        }
+    </style>
+
+    <div class="sidebar-toggle" onclick="toggleSidebar()">☰</div>
+"""
+
+st.markdown(toggle_sidebar_js, unsafe_allow_html=True)
 
 # ---- Hide Streamlit Branding (Footer + Header + Menu Icon) ----
 hide_streamlit_style = """
