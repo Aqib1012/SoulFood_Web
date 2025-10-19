@@ -22,7 +22,6 @@ toggle_sidebar_js = """
     </script>
 
     <style>
-        /* Floating Toggle Button */
         .sidebar-toggle {
             position: fixed;
             top: 15px;
@@ -37,10 +36,10 @@ toggle_sidebar_js = """
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
 
-        /* Initially hide the sidebar on mobile */
+        /* ✅ Sidebar visible by default on all screens */
         @media (max-width: 768px) {
             section[data-testid="stSidebar"] {
-                transform: translateX(-100%);
+                transform: translateX(0);
                 transition: transform 0.3s ease-in-out;
             }
         }
@@ -48,8 +47,8 @@ toggle_sidebar_js = """
 
     <div class="sidebar-toggle" onclick="toggleSidebar()">☰</div>
 """
-
 st.markdown(toggle_sidebar_js, unsafe_allow_html=True)
+
 
 # ---- Hide Streamlit Branding (Footer + Header + Menu Icon) ----
 hide_streamlit_style = """
