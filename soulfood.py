@@ -9,12 +9,12 @@ from streamlit_autorefresh import st_autorefresh
 # ---------------------- CONFIG ----------------------
 st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
 
-# ---------------------- DATABASE -------------------
+# ---------------------- DATABASE ----------------------
 DB_PATH = "database.db"
 
 
 def get_conn():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
 def create_tables():
@@ -75,7 +75,6 @@ BIBLE_VERSES = [
     "🎵 Psalm 104:33 — I will sing unto the Lord as long as I live.",
 ]
 
-
 # ---------------------- AUTO SYNC ------------------
 def auto_sync_songs():
     """
@@ -107,7 +106,6 @@ def image_to_base64(image_path):
     try:
         with open(image_path, "rb") as img_file:
             b64 = base64.b64encode(img_file.read()).decode()
-        # detect extension from file name
         ext = Path(image_path).suffix.replace(".", "").lower()
         if ext not in ("jpg", "jpeg", "png", "gif"):
             ext = "jpeg"
@@ -158,11 +156,13 @@ def delete_song(song_id):
     cur = conn.cursor()
     cur.execute("SELECT file_path FROM songs WHERE id=?", (song_id,))
     file_path_row = cur.fetchone()
-    if file_path_row and os.path.exists(file_path_row[0]):
-        try:
-            os.remove(file_path_row[0])
-        except Exception:
-            pass
+    if file_path_row:
+        file_path = file_path_row[0]
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
     cur.execute("DELETE FROM songs WHERE id=?", (song_id,))
     cur.execute("DELETE FROM favorites WHERE song_id=?", (song_id,))
     conn.commit()
@@ -184,7 +184,7 @@ def audio_data_url(file_path):
         return None
 
 
-# ---------------------- CSS (LIGHT + DARK + RESPONSIVE) ------------------------
+# ---------------------- CSS (RESPONSIVE) ------------------------
 BASE_CSS = """
 <style>
 :root {
@@ -196,8 +196,6 @@ BASE_CSS = """
   --accent: #0b63d4;
   --shadow: rgba(2,6,23,0.06);
 }
-
-/* Dark overrides will be injected if dark mode is selected */
 
 body {
     background-color: var(--bg);
@@ -332,76 +330,7 @@ body {
 </style>
 """
 
-# ---------------------- DARK MODE CSS ----------------------
-DARK_CSS = """
-<style>
-/* Background */
-html, body, [class*="css"] {
-    background-color: #121212 !important;
-    color: #ffffff !important;
-}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #1E1E1E !important;
-    color: white !important;
-}
-
-/* Buttons */
-button, .stButton>button {
-    background-color: #007BFF !important;
-    color: white !important;
-    border-radius: 8px !important;
-}
-
-/* Card Titles, Text, Headers */
-h1, h2, h3, h4, h5, h6, p, span, label {
-    color: #EAEAEA !important;
-}
-</style>
-"""
-
-# ---------------------- LIGHT MODE CSS ----------------------
-LIGHT_CSS = """
-<style>
-html, body {
-    background-color: #F7F7F7 !important;
-    color: black !important;
-}
-section[data-testid="stSidebar"] {
-    background-color: #FFFFFF !important;
-    color: black !important;
-}
-</style>
-"""
-
-
-# ---------------------- THEME TOGGLE ----------------------
-if "dark_mode" not in st.session_state:
-    st.session_state["dark_mode"] = False   # Default = Light Mode
-
-# Sidebar Toggle Switch
-with st.sidebar:
-    toggle = st.checkbox("🌙 Dark Mode (Press 'B' to toggle)", value=st.session_state["dark_mode"])
-    st.session_state["dark_mode"] = toggle
-
-# Keyboard Shortcut: "B" = Toggle Dark/Light
-pressed_key = st.session_state.get("pressed_key", "")
-
-if pressed_key.lower() == "b":
-    st.session_state["dark_mode"] = not st.session_state["dark_mode"]
-    st.session_state["pressed_key"] = ""  # Reset key to avoid loop
-    st.rerun()
-
-# Apply CSS Based on Mode
-if st.session_state["dark_mode"]:
-    st.markdown(DARK_CSS, unsafe_allow_html=True)
-else:
-    st.markdown(LIGHT_CSS, unsafe_allow_html=True)
-
-
-
-# ---------------------- HEADER / PLAYER HELPERS ---------------------
+# ---------------------- HEADER / PLAYER HELPERS ----------------------
 def show_header():
     # Auto refresh every 30s for verse
     st_autorefresh(interval=30000, key="verse_refresh")
@@ -418,10 +347,8 @@ def show_header():
 def show_sticky_player_if_playing():
     playing_id = st.session_state.get("playing_song")
     if not playing_id:
-        # hide player by ensuring the element isn't rendered
         return
 
-    # lookup file_path and title
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT title, file_path FROM songs WHERE id=?", (playing_id,))
@@ -455,10 +382,8 @@ def show_sticky_player_if_playing():
       </div>
     </div>
     <script>
-      // make the sticky player visible
       const p = document.getElementById('sticky-player');
       if (p) p.style.display = 'flex';
-      // ensure audio stops when session state playing_song becomes null (user actions still needed)
     </script>
     """
     st.markdown(player_html, unsafe_allow_html=True)
@@ -479,7 +404,6 @@ def show_singers():
 
     for key, data in SINGERS.items():
         img_src = image_to_base64(data["image"]) if os.path.exists(data["image"]) else ""
-        # Render singer card (image + button)
         st.markdown(
             f"""
             <div class="singer-card">
@@ -492,7 +416,6 @@ def show_singers():
             """,
             unsafe_allow_html=True,
         )
-        # separate Streamlit button that actually triggers selection
         if st.button(f"Open {data['name']}", key=f"open_{key}"):
             st.session_state["selected_singer"] = key
             st.session_state["show_favorites"] = False
@@ -633,27 +556,15 @@ if "show_favorites" not in st.session_state:
     st.session_state["show_favorites"] = False
 if "playing_song" not in st.session_state:
     st.session_state["playing_song"] = None
-if "dark_mode" not in st.session_state:
-    st.session_state["dark_mode"] = False
 
 # Insert base CSS
 st.markdown(BASE_CSS, unsafe_allow_html=True)
-# Conditionally insert dark css
-if st.session_state["dark_mode"]:
-    st.markdown(DARK_CSS, unsafe_allow_html=True)
 
-# ---------------------- SIDEBAR (responsive + dark toggle + upload) --------------------
+# ---------------------- SIDEBAR (responsive + upload) --------------------
 with st.sidebar:
     st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
     st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # Dark mode toggle
-    dm = st.checkbox("🌙 Dark Mode", value=st.session_state["dark_mode"], key="dm_toggle")
-    if dm != st.session_state["dark_mode"]:
-        st.session_state["dark_mode"] = dm
-        # refresh page to apply theme css
-        st.rerun()
 
     # Add new singer (optional small form)
     with st.expander("➕ Add Singer (optional)", expanded=False):
@@ -702,7 +613,7 @@ with st.sidebar:
                 conn.commit()
                 conn.close()
                 st.success(f"✅ Song '{song_title}' uploaded successfully!")
-                time.sleep(1.0)
+                time.sleep(0.5)
                 auto_sync_songs()
                 st.rerun()
 
