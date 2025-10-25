@@ -1,4 +1,3 @@
-# soulfood.py
 import streamlit as st
 from pathlib import Path
 import os
@@ -185,7 +184,220 @@ def audio_data_url(file_path):
         return None
 
 
+# ---------------------- CSS (LIGHT + DARK + RESPONSIVE) ------------------------
+BASE_CSS = """
+<style>
+:root {
+  --bg: #f6f9fc;
+  --card: #ffffff;
+  --muted: #5b6876;
+  --primary: #007BFF;
+  --text: #0b1730;
+  --accent: #0b63d4;
+  --shadow: rgba(2,6,23,0.06);
+}
 
+/* Dark overrides will be injected if dark mode is selected */
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+.title {
+    color: var(--primary);
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+/* Verse box */
+.verse-box {
+    background-color: #e8f0fe;
+    border-left: 5px solid var(--primary);
+    border-radius: 10px;
+    padding: 10px 15px;
+    text-align: center;
+    font-style: italic;
+    color: var(--text);
+    font-size: 16px;
+    margin-top: 8px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+/* Singer grid */
+.singer-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
+}
+
+.singer-card {
+    background-color: var(--card);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: all 0.28s ease;
+}
+.singer-card:hover {
+    transform: translateY(-6px);
+}
+
+/* Singer image circle */
+.singer-img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 12px;
+    border: 4px solid var(--primary);
+}
+
+/* Song grid */
+.song-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
+}
+
+.song-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: transform .22s ease, box-shadow .22s ease;
+}
+.song-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px var(--shadow); }
+.song-card h4 { margin: 8px 0 10px 0; }
+
+/* Buttons layout */
+.controls-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+.btn { padding:10px 12px; border-radius:10px; font-weight:600; border:none; cursor:pointer; }
+.btn-ghost { background: transparent; border: 1px solid rgba(0,0,0,0.06); }
+.btn-primary { background: var(--primary); color: #fff; }
+
+/* Sidebar responsive: when screen small, sidebar becomes full width */
+@media (max-width: 700px) {
+    section[data-testid="stSidebar"] { position: relative !important; width: 100% !important; min-width: unset !important; z-index:9999; }
+    .singer-img { width: 120px; height:120px; }
+}
+
+/* Sticky bottom player */
+#sticky-player {
+    position: fixed;
+    left: 15%;
+    right: 15%;
+    bottom: 18px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 40px var(--shadow);
+    display: none; /* toggled visible by JS/CSS when playing */
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+}
+
+/* If viewport small, make player full width bottom */
+@media (max-width: 900px) {
+    #sticky-player { left: 8px; right: 8px; }
+}
+
+/* simple fade animation */
+@keyframes fadeIn { from { opacity: 0;} to { opacity: 1; } }
+
+.small-note { color: var(--muted); font-size:13px; margin-top:6px; text-align:center; }
+
+</style>
+"""
+
+# ---------------------- DARK MODE CSS ----------------------
+DARK_CSS = """
+<style>
+/* Background */
+html, body, [class*="css"] {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #1E1E1E !important;
+    color: white !important;
+}
+
+/* Buttons */
+button, .stButton>button {
+    background-color: #007BFF !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
+
+/* Card Titles, Text, Headers */
+h1, h2, h3, h4, h5, h6, p, span, label {
+    color: #EAEAEA !important;
+}
+</style>
+"""
+
+# ---------------------- LIGHT MODE CSS ----------------------
+LIGHT_CSS = """
+<style>
+html, body {
+    background-color: #F7F7F7 !important;
+    color: black !important;
+}
+section[data-testid="stSidebar"] {
+    background-color: #FFFFFF !important;
+    color: black !important;
+}
+</style>
+"""
+
+
+# ---------------------- THEME TOGGLE ----------------------
+if "dark_mode" not in st.session_state:
+    st.session_state["dark_mode"] = False   # Default = Light Mode
+
+# Sidebar Toggle Switch
+with st.sidebar:
+    toggle = st.checkbox("🌙 Dark Mode (Press 'B' to toggle)", value=st.session_state["dark_mode"])
+    st.session_state["dark_mode"] = toggle
+
+# Keyboard Shortcut: "B" = Toggle Dark/Light
+pressed_key = st.session_state.get("pressed_key", "")
+
+if pressed_key.lower() == "b":
+    st.session_state["dark_mode"] = not st.session_state["dark_mode"]
+    st.session_state["pressed_key"] = ""  # Reset key to avoid loop
+    st.rerun()
+
+# Apply CSS Based on Mode
+if st.session_state["dark_mode"]:
+    st.markdown(DARK_CSS, unsafe_allow_html=True)
+else:
+    st.markdown(LIGHT_CSS, unsafe_allow_html=True)
 
 
 
@@ -246,6 +458,7 @@ def show_sticky_player_if_playing():
       // make the sticky player visible
       const p = document.getElementById('sticky-player');
       if (p) p.style.display = 'flex';
+      // ensure audio stops when session state playing_song becomes null (user actions still needed)
     </script>
     """
     st.markdown(player_html, unsafe_allow_html=True)
@@ -273,14 +486,14 @@ def show_singers():
                 <img src="{img_src}" class="singer-img" alt="{data['name']}">
                 <h4 style="margin-bottom:6px;">{data['name']}</h4>
                 <div style="margin-top:8px;">
-                    <button class="btn btn-primary" onclick="document.querySelector('button[aria-label=\'open_{key}\']')?.click()">🎤 Listen</button>
+                    <button onclick="document.querySelector('button[kind=play_{key}]')?.click()" class="btn btn-primary">🎤 Listen</button>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
         # separate Streamlit button that actually triggers selection
-        if st.button(f"Open {data['name']}", key=f"open_{key}", help=f"Open {data['name']} songs"):
+        if st.button(f"Open {data['name']}", key=f"open_{key}"):
             st.session_state["selected_singer"] = key
             st.session_state["show_favorites"] = False
             st.session_state["playing_song"] = None
@@ -423,20 +636,43 @@ if "playing_song" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state["dark_mode"] = False
 
+# Insert base CSS
+st.markdown(BASE_CSS, unsafe_allow_html=True)
+# Conditionally insert dark css
+if st.session_state["dark_mode"]:
+    st.markdown(DARK_CSS, unsafe_allow_html=True)
+
 # ---------------------- SIDEBAR (responsive + dark toggle + upload) --------------------
 with st.sidebar:
     st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
     st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Dark mode toggle (re-apply theme and rerun)
+    # Dark mode toggle
     dm = st.checkbox("🌙 Dark Mode", value=st.session_state["dark_mode"], key="dm_toggle")
     if dm != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = dm
-        # Apply the theme CSS and rerun to reflect changes
+        # refresh page to apply theme css
         st.rerun()
 
-    
+    # Add new singer (optional small form)
+    with st.expander("➕ Add Singer (optional)", expanded=False):
+        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)")
+        new_singer_name = st.text_input("Singer name")
+        new_singer_img = st.text_input("Image path (optional)")
+        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)")
+        if st.button("Add Singer"):
+            if not new_singer_key or not new_singer_name:
+                st.error("Please provide both key and name.")
+            else:
+                key = new_singer_key.strip()
+                folder = new_singer_folder.strip() or f"audio/{key}"
+                SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
+                Path(folder).mkdir(parents=True, exist_ok=True)
+                st.success(f"Added singer {new_singer_name}")
+                st.rerun()
+
+    st.markdown("---")
 
     # Upload form
     with st.form("upload_form", clear_on_submit=True):
@@ -487,10 +723,3 @@ else:
 
 # sticky bottom player area (rendered regardless; its internal JS toggles display)
 show_sticky_player_if_playing()
-
-# ------------- NOTES -------------
-# Keyboard "B" toggle note:
-# Streamlit does not allow a reliable server-side session_state update from injected JS without a proper Streamlit component.
-# If you want keyboard toggle, I can provide a small Streamlit Component (single-file) to capture keypress and set session_state.
-# For now, use the sidebar checkbox to switch themes — it's stable and works across all Streamlit versions.
-
