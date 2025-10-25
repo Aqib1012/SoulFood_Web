@@ -170,7 +170,7 @@ def delete_song(song_id):
     st.success("🗑️ Song deleted successfully!")
     if st.session_state.get("playing_song") == song_id:
         st.session_state["playing_song"] = None
-    st.experimental_rerun()
+    st.rerun()
 
 
 def audio_data_url(file_path):
@@ -444,7 +444,7 @@ def show_singers():
             st.session_state["selected_singer"] = key
             st.session_state["show_favorites"] = False
             st.session_state["playing_song"] = None
-            st.experimental_rerun()
+            st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -459,7 +459,7 @@ def show_songs(singer_key):
         st.session_state["selected_singer"] = None
         st.session_state["playing_song"] = None
         st.session_state["show_favorites"] = False
-        st.experimental_rerun()
+        st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -491,16 +491,16 @@ def show_songs(singer_key):
             if st.session_state.get("playing_song") == song_id:
                 if st.button("⏸️ Stop", key=f"stop_{song_id}"):
                     st.session_state["playing_song"] = None
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 if st.button("▶️ Play", key=f"play_{song_id}"):
                     st.session_state["playing_song"] = song_id
-                    st.experimental_rerun()
+                    st.rerun()
 
         with c2:
             if st.button(fav_heart + " Favorite", key=f"fav_{song_id}"):
                 toggle_favorite(song_id)
-                st.experimental_rerun()
+                st.rerun()
 
         with c3:
             if st.button("🗑️ Delete", key=f"del_{song_id}"):
@@ -531,7 +531,7 @@ def show_favorites_view():
         st.session_state["show_favorites"] = False
         st.session_state["selected_singer"] = None
         st.session_state["playing_song"] = None
-        st.experimental_rerun()
+        st.rerun()
 
     for song_id, title, file_path in favs:
         st.markdown(
@@ -556,15 +556,15 @@ def show_favorites_view():
             if st.session_state.get("playing_song") == song_id:
                 if st.button("⏸️ Stop", key=f"stopfav_{song_id}"):
                     st.session_state["playing_song"] = None
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 if st.button("▶️ Play", key=f"playfav_{song_id}"):
                     st.session_state["playing_song"] = song_id
-                    st.experimental_rerun()
+                    st.rerun()
         with c2:
             if st.button("💔 Remove", key=f"remove_fav_{song_id}"):
                 toggle_favorite(song_id)
-                st.experimental_rerun()
+                st.rerun()
             if st.button("🗑️ Delete", key=f"delete_fav_{song_id}"):
                 delete_song(song_id)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -600,7 +600,7 @@ with st.sidebar:
     if dm != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = dm
         # refresh page to apply theme css
-        st.experimental_rerun()
+        st.rerun()
 
     # Add new singer (optional small form)
     with st.expander("➕ Add Singer (optional)", expanded=False):
@@ -617,7 +617,7 @@ with st.sidebar:
                 SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
                 Path(folder).mkdir(parents=True, exist_ok=True)
                 st.success(f"Added singer {new_singer_name}")
-                st.experimental_rerun()
+                st.rerun()
 
     st.markdown("---")
 
@@ -651,14 +651,14 @@ with st.sidebar:
                 st.success(f"✅ Song '{song_title}' uploaded successfully!")
                 time.sleep(1.0)
                 auto_sync_songs()
-                st.experimental_rerun()
+                st.rerun()
 
     st.markdown("---")
     if st.button("❤️ View Favorites"):
         st.session_state["show_favorites"] = True
         st.session_state["selected_singer"] = None
         st.session_state["playing_song"] = None
-        st.experimental_rerun()
+        st.rerun()
 
 # ---------------------- MAIN VIEW ------------------
 if st.session_state["show_favorites"]:
