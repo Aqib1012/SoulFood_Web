@@ -332,47 +332,73 @@ body {
 </style>
 """
 
-# ---------------------- DARK THEME CSS -------------------
-# ---- Pure DARK MODE CSS ----
-dark_css = """
+# ---------------------- DARK MODE CSS ----------------------
+DARK_CSS = """
 <style>
-    /* Full App Background */
-    .stApp {
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-    }
+/* Background */
+html, body, [class*="css"] {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+}
 
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #0d0d0d !important;
-        color: #FFFFFF !important;
-    }
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #1E1E1E !important;
+    color: white !important;
+}
 
-    /* Buttons */
-    button[kind="primary"] {
-        background-color: #1a1a1a !important;
-        color: white !important;
-        border: 1px solid #333 !important;
-    }
+/* Buttons */
+button, .stButton>button {
+    background-color: #007BFF !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
 
-    button:hover {
-        background-color: #333333 !important;
-        color: white !important;
-    }
-
-    /* Text Inputs */
-    .stTextInput > div > div > input {
-        background-color: #1a1a1a !important;
-        color: white !important;
-    }
-
-    /* Audio Player Background */
-    audio {
-        filter: invert(1) hue-rotate(180deg);
-    }
+/* Card Titles, Text, Headers */
+h1, h2, h3, h4, h5, h6, p, span, label {
+    color: #EAEAEA !important;
+}
 </style>
 """
-st.markdown(dark_css, unsafe_allow_html=True)
+
+# ---------------------- LIGHT MODE CSS ----------------------
+LIGHT_CSS = """
+<style>
+html, body {
+    background-color: #F7F7F7 !important;
+    color: black !important;
+}
+section[data-testid="stSidebar"] {
+    background-color: #FFFFFF !important;
+    color: black !important;
+}
+</style>
+"""
+
+
+# ---------------------- THEME TOGGLE ----------------------
+if "dark_mode" not in st.session_state:
+    st.session_state["dark_mode"] = False   # Default = Light Mode
+
+# Sidebar Toggle Switch
+with st.sidebar:
+    toggle = st.checkbox("🌙 Dark Mode (Press 'B' to toggle)", value=st.session_state["dark_mode"])
+    st.session_state["dark_mode"] = toggle
+
+# Keyboard Shortcut: "B" = Toggle Dark/Light
+pressed_key = st.session_state.get("pressed_key", "")
+
+if pressed_key.lower() == "b":
+    st.session_state["dark_mode"] = not st.session_state["dark_mode"]
+    st.session_state["pressed_key"] = ""  # Reset key to avoid loop
+    st.rerun()
+
+# Apply CSS Based on Mode
+if st.session_state["dark_mode"]:
+    st.markdown(DARK_CSS, unsafe_allow_html=True)
+else:
+    st.markdown(LIGHT_CSS, unsafe_allow_html=True)
+
 
 
 # ---------------------- HEADER / PLAYER HELPERS ---------------------
