@@ -1,3 +1,4 @@
+# soulfood_mobile_ui.py
 import streamlit as st
 from pathlib import Path
 import os
@@ -184,165 +185,155 @@ def audio_data_url(file_path):
         return None
 
 
-# ---------------------- CSS (RESPONSIVE) ------------------------
-BASE_CSS = """
+# ---------------------- MOBILE / NATIVE-LIKE CSS ------------------------
+MOBILE_CSS = """
 <style>
-:root {
-  --bg: #f6f9fc;
-  --card: #ffffff;
-  --muted: #5b6876;
-  --primary: #007BFF;
-  --text: #0b1730;
-  --accent: #0b63d4;
-  --shadow: rgba(2,6,23,0.06);
+:root{
+  --bg: linear-gradient(180deg,#0f172a 0%, #071032 100%);
+  --card: #0b1220;
+  --muted: #93a3b8;
+  --accent: #7dd3fc;
+  --accent-2: #60a5fa;
+  --glass: rgba(255,255,255,0.03);
+  --pill: rgba(255,255,255,0.04);
+  --shadow: rgba(2,6,23,0.65);
+  --text: #e6eef8;
 }
 
-body {
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+html, body, [data-testid="stAppViewContainer"] {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* Header */
-.header {
-    text-align: center;
-    margin-top: 8px;
-    margin-bottom: 6px;
-}
-.title {
-    color: var(--primary);
-    font-weight: 800;
-    margin-bottom: 4px;
+/* Page container adjusted for mobile app feel */
+.block-container {
+  padding-top: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  max-width: 430px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* Verse box */
-.verse-box {
-    background-color: #e8f0fe;
-    border-left: 5px solid var(--primary);
-    border-radius: 10px;
-    padding: 10px 15px;
-    text-align: center;
-    font-style: italic;
-    color: var(--text);
-    font-size: 16px;
-    margin-top: 8px;
-    animation: fadeIn 1s ease-in-out;
+/* App header */
+.app-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 8px;
+  border-radius:14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  margin-bottom: 10px;
+}
+.app-title {
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:0.4px;
+  color:var(--text);
+}
+.verse-pill {
+  background: linear-gradient(90deg, rgba(125,211,252,0.12), rgba(96,165,250,0.08));
+  padding:8px 12px;
+  border-radius:999px;
+  font-size:13px;
+  color:var(--text);
+  box-shadow: 0 6px 18px rgba(6,10,24,0.55);
 }
 
-/* Singer grid */
-.singer-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 22px;
-    margin-top: 20px;
-    width: 100%;
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 6px;
+/* Singer card (rounded) */
+.singer-grid {
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+  margin-bottom: 12px;
 }
-
 .singer-card {
-    background-color: var(--card);
-    border-radius: 14px;
-    padding: 18px;
-    text-align: center;
-    box-shadow: 0 8px 22px var(--shadow);
-    transition: all 0.28s ease;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;
+  padding:14px;
+  text-align:center;
+  box-shadow: 0 12px 30px rgba(2,6,23,0.5);
+  transition: transform .18s ease;
+  cursor: pointer;
 }
-.singer-card:hover {
-    transform: translateY(-6px);
+.singer-card:active { transform: translateY(3px) scale(0.995); }
+.singer-card img { width:82px; height:82px; border-radius:50%; object-fit:cover; border: 3px solid rgba(125,211,252,0.12); margin-bottom:8px; }
+
+/* Song list */
+.song-list { display:flex; flex-direction:column; gap:10px; margin-bottom:80px; }
+.song-tile {
+  display:flex; align-items:center; gap:12px; justify-content:space-between;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  padding:12px; border-radius:14px; box-shadow: 0 8px 20px rgba(2,6,23,0.45);
 }
+.song-info { flex:1; min-width:0; }
+.song-title { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.song-sub { color:var(--muted); font-size:13px; margin-top:4px; }
 
-/* Singer image circle */
-.singer-img {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 12px;
-    border: 4px solid var(--primary);
-}
-
-/* Song grid */
-.song-grid {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    width: 100%;
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 6px;
-}
-
-.song-card {
-    background: var(--card);
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-    box-shadow: 0 8px 22px var(--shadow);
-    transition: transform .22s ease, box-shadow .22s ease;
-}
-.song-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px var(--shadow); }
-.song-card h4 { margin: 8px 0 10px 0; }
-
-/* Buttons layout */
-.controls-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
-.btn { padding:10px 12px; border-radius:10px; font-weight:600; border:none; cursor:pointer; }
-.btn-ghost { background: transparent; border: 1px solid rgba(0,0,0,0.06); }
-.btn-primary { background: var(--primary); color: #fff; }
-
-/* Sidebar responsive: when screen small, sidebar becomes full width */
-@media (max-width: 700px) {
-    section[data-testid="stSidebar"] { position: relative !important; width: 100% !important; min-width: unset !important; z-index:9999; }
-    .singer-img { width: 120px; height:120px; }
-}
-
-/* Sticky bottom player */
+/* Floating sticky player (rounded pill) */
 #sticky-player {
-    position: fixed;
-    left: 15%;
-    right: 15%;
-    bottom: 18px;
-    background: var(--card);
-    border-radius: 14px;
-    padding: 10px 14px;
-    box-shadow: 0 10px 40px var(--shadow);
-    display: none; /* toggled visible by JS/CSS when playing */
-    align-items: center;
-    justify-content: center;
-    z-index: 9998;
+  position:fixed; left:50%; transform:translateX(-50%); bottom:78px;
+  width:92%; max-width:430px; border-radius:999px; padding:10px 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+  display:none; align-items:center; gap:12px; z-index:9999;
+}
+#sticky-player .title { font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Bottom navigation */
+.bottom-nav {
+  position:fixed; left:50%; transform:translateX(-50%); bottom:12px;
+  width:94%; max-width:430px; display:flex; justify-content:space-between; gap:8px;
+  padding:8px; border-radius:18px; background: linear-gradient(90deg, rgba(3,7,18,0.7), rgba(3,7,18,0.55));
+  box-shadow: 0 10px 30px rgba(2,6,23,0.7); z-index:10000;
+}
+.bottom-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 8px; border-radius:12px; cursor:pointer; color:var(--muted);
+  border: none; background:transparent; font-weight:700;
+}
+.bottom-btn.active { color:var(--accent); background: linear-gradient(90deg, rgba(125,211,252,0.06), rgba(96,165,250,0.04)); box-shadow: inset 0 -2px 8px rgba(125,211,252,0.02); }
+
+/* Admin bottom sheet */
+.admin-sheet {
+  position:fixed; left:50%; transform:translateX(-50%); bottom:0;
+  width:100%; max-width:430px; border-top-left-radius:18px; border-top-right-radius:18px;
+  background:linear-gradient(180deg, rgba(8,13,25,0.95), rgba(6,10,18,0.98)); padding:14px;
+  box-shadow: 0 -6px 40px rgba(2,6,23,0.8); z-index:10001;
 }
 
-/* If viewport small, make player full width bottom */
-@media (max-width: 900px) {
-    #sticky-player { left: 8px; right: 8px; }
+/* Responsive adjustments */
+@media(min-width:900px){
+  .singer-grid { grid-template-columns: repeat(3, 1fr); }
 }
-
-/* simple fade animation */
-@keyframes fadeIn { from { opacity: 0;} to { opacity: 1; } }
-
-.small-note { color: var(--muted); font-size:13px; margin-top:6px; text-align:center; }
-
 </style>
 """
 
 # ---------------------- HEADER / PLAYER HELPERS ----------------------
-def show_header():
+def show_header(compact=False):
     # Auto refresh every 30s for verse
     st_autorefresh(interval=30000, key="verse_refresh")
-    st.markdown("<div class='header'>", unsafe_allow_html=True)
-    st.markdown("<h1 class='title'>🎵 SoulFood – پرستش 🎵</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='small-note'>Gospel Music Player — Mobile & Desktop friendly</p>", unsafe_allow_html=True)
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
     verse = BIBLE_VERSES[verse_index]
-    st.markdown(f"<div class='verse-box'>{verse}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("---", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class='app-header'>
+          <div style='display:flex; align-items:center; gap:10px;'>
+            <img src="data:image/svg+xml;base64,{base64.b64encode(HEADER_SVG.encode()).decode()}" style="width:38px;height:38px;border-radius:10px;"/>
+            <div class='app-title'>SoulFood</div>
+          </div>
+          <div class='verse-pill'>{verse}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
+
+# small inline SVG used for header icon (keeps external assets unchanged)
+HEADER_SVG = """<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><rect width='24' height='24' rx='5' fill='#0b1220'/><path d='M9 9v6.5A3.5 3.5 0 1 0 15.5 19V8' stroke='url(#g)' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='#7dd3fc'/><stop offset='1' stop-color='#60a5fa'/></linearGradient></defs></svg>"""
 
 def show_sticky_player_if_playing():
     playing_id = st.session_state.get("playing_song")
@@ -366,20 +357,15 @@ def show_sticky_player_if_playing():
         st.warning("⚠️ Cannot load audio for sticky player.")
         return
 
-    # Render a minimal HTML audio player fixed at bottom with controls & title
     player_html = f"""
-    <div id="sticky-player" style="display:flex; gap:12px; align-items:center; justify-content:center;">
-      <div style="font-weight:700; min-width:180px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+    <div id="sticky-player" style="display:flex;">
+      <div style="font-weight:800; min-width:140px; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
         🎧 {title}
       </div>
-      <audio id="sticky-audio" controls style="max-width:70%; width:100%;">
+      <audio id="sticky-audio" controls style="flex:1; max-width:55%;">
         <source src="{data_url}" type="audio/mp3">
         Your browser does not support the audio element.
       </audio>
-      <div style="min-width:80px; display:flex; gap:6px; justify-content:center;">
-        <button onclick="document.getElementById('sticky-audio').pause();" style="padding:8px;border-radius:8px;">⏸️</button>
-        <button onclick="document.getElementById('sticky-audio').play();" style="padding:8px;border-radius:8px;">▶️</button>
-      </div>
     </div>
     <script>
       const p = document.getElementById('sticky-player');
@@ -389,29 +375,23 @@ def show_sticky_player_if_playing():
     st.markdown(player_html, unsafe_allow_html=True)
 
 
-# ---------------------- VIEWS ----------------------
+# ---------------------- VIEWS (UI only changed) ----------------------
 def show_singers():
     show_header()
-    st.info(
-        """
-        📱 **Mobile tip:** Tap the top-left menu (≡) for the Admin Panel.  
-        Use the buttons under each singer to open their songs.
-        """,
-        icon="ℹ️",
+    st.markdown(
+        "<div style='margin-top:6px; font-weight:700; color:var(--muted); margin-bottom:6px;'>Choose a singer</div>",
+        unsafe_allow_html=True,
     )
-    st.markdown("<h3 style='text-align:center; margin-top:6px;'>Select a Singer</h3>", unsafe_allow_html=True)
-    st.markdown('<div class="singer-row">', unsafe_allow_html=True)
-
+    st.markdown('<div class="singer-grid">', unsafe_allow_html=True)
     for key, data in SINGERS.items():
         img_src = image_to_base64(data["image"]) if os.path.exists(data["image"]) else ""
+        # Each singer card uses a button to open singer view (keeps old behavior)
         st.markdown(
             f"""
-            <div class="singer-card">
-                <img src="{img_src}" class="singer-img" alt="{data['name']}">
-                <h4 style="margin-bottom:6px;">{data['name']}</h4>
-                <div style="margin-top:8px;">
-                    <button onclick="document.querySelector('button[kind=play_{key}]')?.click()" class="btn btn-primary">🎤 Listen</button>
-                </div>
+            <div class="singer-card" onclick="document.querySelector('button[kind=open_{key}]')?.click()">
+                <img src="{img_src}" alt="{data['name']}">
+                <div style="font-weight:800; margin-top:6px;">{data['name']}</div>
+                <div style="margin-top:6px; color:var(--muted); font-weight:600; font-size:13px;">Tap to open</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -429,59 +409,59 @@ def show_songs(singer_key):
     songs = get_songs_by_singer(singer_key)
     fav_ids = get_favorites()
 
-    st.markdown(f"<h3 style='text-align:center; margin-top:6px;'>{SINGERS[singer_key]['name']} Songs</h3>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-weight:800; font-size:18px; margin-bottom:6px;'>{SINGERS[singer_key]['name']}</div>", unsafe_allow_html=True)
 
-    if st.button("⬅️ Back to Singers", key="back_top"):
+    if st.button("⬅️ Back", key="back_top"):
         st.session_state["selected_singer"] = None
         st.session_state["playing_song"] = None
         st.session_state["show_favorites"] = False
         st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
     if not songs:
         st.info("No songs found for this singer.")
         return
 
-    st.markdown('<div class="song-grid">', unsafe_allow_html=True)
+    st.markdown('<div class="song-list">', unsafe_allow_html=True)
 
     for song_id, title, file_path in songs:
         fav_heart = "❤️" if song_id in fav_ids else "🤍"
-        st.markdown("<div class='song-card'>", unsafe_allow_html=True)
-        st.markdown(f"<h4>🎵 {title}</h4>", unsafe_allow_html=True)
+        # Song tile
+        st.markdown("<div class='song-tile'>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class='song-info'>
+              <div class='song-title'>🎵 {title}</div>
+              <div class='song-sub'>{SINGERS[singer_key]['name']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        # Show inline audio player only when playing this song (so grid stays small)
-        if st.session_state.get("playing_song") == song_id:
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, "rb") as f:
-                        st.audio(f.read(), format="audio/mp3")
-                except Exception:
-                    st.warning("⚠️ Failed to load audio file.")
-            else:
-                st.warning("⚠️ Audio file missing!")
+        # Buttons column (Play / Favorite / Delete)
+        col_html = """
+        <div style='display:flex; gap:8px; align-items:center;'>
+        """
+        st.markdown(col_html, unsafe_allow_html=True)
 
-        # Buttons in a row
         c1, c2, c3 = st.columns([1, 1, 1])
         with c1:
             if st.session_state.get("playing_song") == song_id:
-                if st.button("⏸️ Stop", key=f"stop_{song_id}"):
+                if st.button("⏸️", key=f"stop_{song_id}"):
                     st.session_state["playing_song"] = None
                     st.rerun()
             else:
-                if st.button("▶️ Play", key=f"play_{song_id}"):
+                if st.button("▶️", key=f"play_{song_id}"):
                     st.session_state["playing_song"] = song_id
                     st.rerun()
-
         with c2:
-            if st.button(fav_heart + " Favorite", key=f"fav_{song_id}"):
+            if st.button(fav_heart, key=f"fav_{song_id}"):
                 toggle_favorite(song_id)
                 st.rerun()
-
         with c3:
-            if st.button("🗑️ Delete", key=f"del_{song_id}"):
+            if st.button("🗑️", key=f"del_{song_id}"):
                 delete_song(song_id)
 
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -498,81 +478,46 @@ def show_favorites_view():
     conn = get_conn()
     cur = conn.cursor()
     placeholders = ",".join(["?"] * len(fav_ids))
-    cur.execute(f"SELECT id, title, file_path FROM songs WHERE id IN ({placeholders})", fav_ids)
+    cur.execute(f"SELECT id, title, file_path, singer FROM (SELECT id, title, file_path, singer FROM songs) WHERE id IN ({placeholders})", fav_ids)
     favs = cur.fetchall()
     conn.close()
 
-    st.markdown("<h3 style='text-align:center; margin-top:6px;'>❤️ Your Favorite Songs</h3>", unsafe_allow_html=True)
-    if st.button("⬅️ Back to Singers"):
-        st.session_state["show_favorites"] = False
-        st.session_state["selected_singer"] = None
-        st.session_state["playing_song"] = None
-        st.rerun()
+    st.markdown("<div style='font-weight:800; font-size:18px; margin-bottom:6px;'>❤️ Favorites</div>", unsafe_allow_html=True)
 
-    for song_id, title, file_path in favs:
+    for song_id, title, file_path, _ in favs:
         st.markdown(
-            f"<div style='text-align:center; background:var(--card); padding:15px; border-radius:12px; "
-            f"box-shadow: 0 8px 20px var(--shadow); margin-bottom:16px;'>"
-            f"<h4>🎵 {title}</h4>",
+            f"<div class='song-tile'><div class='song-info'><div class='song-title'>🎵 {title}</div></div>",
             unsafe_allow_html=True,
         )
-
-        if st.session_state.get("playing_song") == song_id:
-            if os.path.exists(file_path):
-                try:
-                    with open(file_path, "rb") as f:
-                        st.audio(f.read(), format="audio/mp3")
-                except Exception:
-                    st.warning("⚠️ Failed to load audio file.")
-            else:
-                st.warning("⚠️ Audio file missing!")
 
         c1, c2 = st.columns([1, 1])
         with c1:
             if st.session_state.get("playing_song") == song_id:
-                if st.button("⏸️ Stop", key=f"stopfav_{song_id}"):
+                if st.button("⏸️", key=f"stopfav_{song_id}"):
                     st.session_state["playing_song"] = None
                     st.rerun()
             else:
-                if st.button("▶️ Play", key=f"playfav_{song_id}"):
+                if st.button("▶️", key=f"playfav_{song_id}"):
                     st.session_state["playing_song"] = song_id
                     st.rerun()
         with c2:
-            if st.button("💔 Remove", key=f"remove_fav_{song_id}"):
+            if st.button("💔", key=f"remove_fav_{song_id}"):
                 toggle_favorite(song_id)
                 st.rerun()
-            if st.button("🗑️ Delete", key=f"delete_fav_{song_id}"):
+            if st.button("🗑️", key=f"delete_fav_{song_id}"):
                 delete_song(song_id)
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------------------- APP START ------------------
-create_tables()
-auto_sync_songs()
-
-if "selected_singer" not in st.session_state:
-    st.session_state["selected_singer"] = None
-if "show_favorites" not in st.session_state:
-    st.session_state["show_favorites"] = False
-if "playing_song" not in st.session_state:
-    st.session_state["playing_song"] = None
-
-# Insert base CSS
-st.markdown(BASE_CSS, unsafe_allow_html=True)
-
-# ---------------------- SIDEBAR (responsive + upload) --------------------
-with st.sidebar:
-    st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
-    st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Add new singer (optional small form)
+# Admin view (same upload form & add singer flow as original, moved into main admin sheet)
+def show_admin_sheet():
+    st.markdown("<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'><div style='font-weight:800; font-size:18px;'>➕ Admin</div><div style='color:var(--muted); font-weight:700;'>Upload & Manage</div></div>", unsafe_allow_html=True)
     with st.expander("➕ Add Singer (optional)", expanded=False):
-        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)")
-        new_singer_name = st.text_input("Singer name")
-        new_singer_img = st.text_input("Image path (optional)")
-        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)")
-        if st.button("Add Singer"):
+        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)", key="admin_new_singer_key")
+        new_singer_name = st.text_input("Singer name", key="admin_new_singer_name")
+        new_singer_img = st.text_input("Image path (optional)", key="admin_new_singer_img")
+        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)", key="admin_new_singer_folder")
+        if st.button("Add Singer", key="admin_add_singer"):
             if not new_singer_key or not new_singer_name:
                 st.error("Please provide both key and name.")
             else:
@@ -581,15 +526,13 @@ with st.sidebar:
                 SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
                 Path(folder).mkdir(parents=True, exist_ok=True)
                 st.success(f"Added singer {new_singer_name}")
-                st.rerun()
+                st.experimental_rerun()
 
     st.markdown("---")
-
-    # Upload form
-    with st.form("upload_form", clear_on_submit=True):
-        singer_choice = st.selectbox("Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"])
-        song_title = st.text_input("Song Title")
-        uploaded_file = st.file_uploader("Upload MP3 File", type=["mp3"])
+    with st.form("upload_form_main", clear_on_submit=True):
+        singer_choice = st.selectbox("Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"], key="admin_singer_choice")
+        song_title = st.text_input("Song Title", key="admin_song_title")
+        uploaded_file = st.file_uploader("Upload MP3 File", type=["mp3"], key="admin_upload")
         submitted = st.form_submit_button("Upload Song")
         if submitted:
             if not uploaded_file:
@@ -615,22 +558,81 @@ with st.sidebar:
                 st.success(f"✅ Song '{song_title}' uploaded successfully!")
                 time.sleep(0.5)
                 auto_sync_songs()
-                st.rerun()
+                st.experimental_rerun()
 
-    st.markdown("---")
-    if st.button("❤️ View Favorites"):
-        st.session_state["show_favorites"] = True
-        st.session_state["selected_singer"] = None
-        st.session_state["playing_song"] = None
-        st.rerun()
 
-# ---------------------- MAIN VIEW ------------------
-if st.session_state["show_favorites"]:
+# ---------------------- APP START ------------------
+create_tables()
+auto_sync_songs()
+
+if "selected_singer" not in st.session_state:
+    st.session_state["selected_singer"] = None
+if "show_favorites" not in st.session_state:
+    st.session_state["show_favorites"] = False
+if "playing_song" not in st.session_state:
+    st.session_state["playing_song"] = None
+if "active_tab" not in st.session_state:
+    st.session_state["active_tab"] = "home"
+if "show_admin_sheet" not in st.session_state:
+    st.session_state["show_admin_sheet"] = False
+
+# Insert CSS
+st.markdown(MOBILE_CSS, unsafe_allow_html=True)
+
+# Main container (mobile-width)
+st.markdown("<div class='block-container'>", unsafe_allow_html=True)
+
+# Top header
+show_header()
+
+# Decide which main content to show (home / favorites / singer / admin)
+if st.session_state["active_tab"] == "home" and not st.session_state["selected_singer"] and not st.session_state["show_favorites"]:
+    show_singers()
+elif st.session_state["active_tab"] == "favorites" or st.session_state.get("show_favorites"):
+    st.session_state["active_tab"] = "favorites"
+    st.session_state["show_favorites"] = True
     show_favorites_view()
 elif st.session_state["selected_singer"]:
     show_songs(st.session_state["selected_singer"])
+elif st.session_state["active_tab"] == "admin" or st.session_state.get("show_admin_sheet"):
+    st.session_state["active_tab"] = "admin"
+    show_admin_sheet()
 else:
     show_singers()
 
-# sticky bottom player area (rendered regardless; its internal JS toggles display)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Sticky bottom player
 show_sticky_player_if_playing()
+
+# Bottom navigation (native-like)
+nav_html = """
+<div class="bottom-nav">
+  <button class="bottom-btn {home_active}" onclick="document.querySelector('button[kind=nav_home]')?.click()">🏠 Home</button>
+  <button class="bottom-btn {fav_active}" onclick="document.querySelector('button[kind=nav_fav]')?.click()">❤️ Fav</button>
+  <button class="bottom-btn {admin_active}" onclick="document.querySelector('button[kind=nav_admin]')?.click()">➕ Admin</button>
+</div>
+""".format(
+    home_active="active" if st.session_state["active_tab"] == "home" else "",
+    fav_active="active" if st.session_state["active_tab"] == "favorites" else "",
+    admin_active="active" if st.session_state["active_tab"] == "admin" else "",
+)
+st.markdown(nav_html, unsafe_allow_html=True)
+
+# Invisible helper buttons (JS clicks them) to change Streamlit session state
+if st.button("nav_home", key="nav_home", help="nav home", on_click=lambda: set_tab("home")):
+    pass
+if st.button("nav_fav", key="nav_fav", help="nav fav", on_click=lambda: set_tab("favorites")):
+    pass
+if st.button("nav_admin", key="nav_admin", help="nav admin", on_click=lambda: set_tab("admin")):
+    pass
+
+# small helper to set tab (must be defined after the buttons)
+def set_tab(tab_name):
+    st.session_state["active_tab"] = tab_name
+    # toggle admin sheet visibility
+    st.session_state["show_admin_sheet"] = tab_name == "admin"
+    st.session_state["selected_singer"] = None
+    st.session_state["show_favorites"] = (tab_name == "favorites")
+    st.session_state["playing_song"] = None
+    st.experimental_rerun()
