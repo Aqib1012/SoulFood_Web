@@ -550,14 +550,58 @@ else:
     show_singers()
 
 # bottom nav (html) - purely cosmetic and duplicates top nav
-bottom_nav_html = """
-<div class='bottom-nav'>
-  <button onclick="window.scrollTo(0,0); document.querySelector('button[title]')?.click();">🏠</button>
-  <button onclick="window.scrollTo(0,0);">❤️</button>
-  <button onclick="window.scrollTo(0,0);">⬆️</button>
-</div>
-"""
-st.markdown(bottom_nav_html, unsafe_allow_html=True)
+# ---------------------- BOTTOM NAVIGATION ----------------------
+nav_placeholder = st.empty()
+
+with nav_placeholder.container():
+    st.markdown("""
+    <style>
+    .bottom-nav {
+        position: fixed;
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        height: 56px;
+        background: white;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -6px 20px rgba(2,6,23,0.06);
+        border-radius: 12px;
+        z-index: 9999;
+    }
+    .bottom-nav button {
+        background: none;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+    }
+    .bottom-nav button:hover {
+        transform: scale(1.2);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("🏠", key="nav_home"):
+            st.session_state["view"] = "home"
+            st.session_state["selected_singer"] = None
+            st.session_state["show_favorites"] = False
+            st.experimental_rerun()
+    with col2:
+        if st.button("❤️", key="nav_fav"):
+            st.session_state["view"] = "favorites"
+            st.session_state["selected_singer"] = None
+            st.session_state["show_favorites"] = True
+            st.experimental_rerun()
+    with col3:
+        if st.button("⬆️", key="nav_upload"):
+            st.session_state["view"] = "upload"
+            st.session_state["selected_singer"] = None
+            st.session_state["show_favorites"] = False
+            st.experimental_rerun()
+
 
 # sticky bottom player area (rendered regardless; its internal JS toggles display)
 show_sticky_player_if_playing()
