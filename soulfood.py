@@ -687,24 +687,7 @@ with st.sidebar:
         # Apply the theme CSS and rerun to reflect changes
         st.rerun()
 
-    # Add new singer (optional small form)
-    with st.expander("➕ Add Singer (optional)", expanded=False):
-        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)")
-        new_singer_name = st.text_input("Singer name")
-        new_singer_img = st.text_input("Image path (optional)")
-        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)")
-        if st.button("Add Singer"):
-            if not new_singer_key or not new_singer_name:
-                st.error("Please provide both key and name.")
-            else:
-                key = new_singer_key.strip()
-                folder = new_singer_folder.strip() or f"audio/{key}"
-                SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
-                Path(folder).mkdir(parents=True, exist_ok=True)
-                st.success(f"Added singer {new_singer_name}")
-                st.rerun()
-
-    st.markdown("---")
+    
 
     # Upload form
     with st.form("upload_form", clear_on_submit=True):
