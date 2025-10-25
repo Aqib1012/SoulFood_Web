@@ -381,7 +381,7 @@ def show_sticky_player_if_playing():
 
 # ---------------------- VIEWS (UI only changed) ----------------------
 def show_singers():
-    show_header()
+    
     st.markdown(
         "<div style='margin-top:6px; font-weight:700; color:var(--muted); margin-bottom:6px;'>Choose a singer</div>",
         unsafe_allow_html=True,
