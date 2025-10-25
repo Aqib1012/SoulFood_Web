@@ -333,20 +333,47 @@ body {
 """
 
 # ---------------------- DARK THEME CSS -------------------
-DARK_CSS = """
+# ---- Pure DARK MODE CSS ----
+dark_css = """
 <style>
-:root {
-  --bg: #071024;
-  --card: #0b1725;
-  --muted: #9aa7b7;
-  --primary: #1e90ff;
-  --text: #e6f0ff;
-  --accent: #2aa1ff;
-  --shadow: rgba(2,6,23,0.55);
-}
-.verse-box { background-color: rgba(30,60,100,0.14); border-left-color: var(--primary); color: var(--text); }
+    /* Full App Background */
+    .stApp {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0d0d0d !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Buttons */
+    button[kind="primary"] {
+        background-color: #1a1a1a !important;
+        color: white !important;
+        border: 1px solid #333 !important;
+    }
+
+    button:hover {
+        background-color: #333333 !important;
+        color: white !important;
+    }
+
+    /* Text Inputs */
+    .stTextInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: white !important;
+    }
+
+    /* Audio Player Background */
+    audio {
+        filter: invert(1) hue-rotate(180deg);
+    }
 </style>
 """
+st.markdown(dark_css, unsafe_allow_html=True)
+
 
 # ---------------------- HEADER / PLAYER HELPERS ---------------------
 def show_header():
