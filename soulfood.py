@@ -569,16 +569,16 @@ def show_admin_sheet():
 create_tables()
 auto_sync_songs()
 
-if "selected_singer" not in st.session_state:
-    st.session_state["selected_singer"] = None
-if "show_favorites" not in st.session_state:
-    st.session_state["show_favorites"] = False
-if "playing_song" not in st.session_state:
-    st.session_state["playing_song"] = None
-if "active_tab" not in st.session_state:
-    st.session_state["active_tab"] = "home"
-if "show_admin_sheet" not in st.session_state:
-    st.session_state["show_admin_sheet"] = False
+# Initialize session states
+for k, v in {
+    "selected_singer": None,
+    "show_favorites": False,
+    "playing_song": None,
+    "active_tab": "home",
+    "show_admin_sheet": False,
+}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # Insert CSS
 st.markdown(MOBILE_CSS, unsafe_allow_html=True)
@@ -586,19 +586,22 @@ st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 # Main container (mobile-width)
 st.markdown("<div class='block-container'>", unsafe_allow_html=True)
 
-# Top header
+# 🔹 Show header only ONCE globally (prevents duplicate key errors)
 show_header()
 
-# Decide which main content to show (home / favorites / singer / admin)
-if st.session_state["active_tab"] == "home" and not st.session_state["selected_singer"] and not st.session_state["show_favorites"]:
+# 🔹 Decide which main content to show
+active_tab = st.session_state["active_tab"]
+selected = st.session_state["selected_singer"]
+
+if active_tab == "home" and not selected and not st.session_state["show_favorites"]:
     show_singers()
-elif st.session_state["active_tab"] == "favorites" or st.session_state.get("show_favorites"):
+elif active_tab == "favorites" or st.session_state.get("show_favorites"):
     st.session_state["active_tab"] = "favorites"
     st.session_state["show_favorites"] = True
     show_favorites_view()
-elif st.session_state["selected_singer"]:
-    show_songs(st.session_state["selected_singer"])
-elif st.session_state["active_tab"] == "admin" or st.session_state.get("show_admin_sheet"):
+elif selected:
+    show_songs(selected)
+elif active_tab == "admin" or st.session_state.get("show_admin_sheet"):
     st.session_state["active_tab"] = "admin"
     show_admin_sheet()
 else:
@@ -609,21 +612,26 @@ st.markdown("</div>", unsafe_allow_html=True)
 # Sticky bottom player
 show_sticky_player_if_playing()
 
-# Bottom navigation (native-like)
-nav_html = """
+# 🔹 Define tab switching helper BEFORE buttons
+def set_tab(tab_name):
+    st.session_state["active_tab"] = tab_name
+    st.session_state["show_admin_sheet"] = (tab_name == "admin")
+    st.session_state["selected_singer"] = None
+    st.session_state["show_favorites"] = (tab_name == "favorites")
+    st.session_state["playing_song"] = None
+    st.experimental_rerun()
+
+# 🔹 Bottom navigation (native-like)
+nav_html = f"""
 <div class="bottom-nav">
-  <button class="bottom-btn {home_active}" onclick="document.querySelector('button[kind=nav_home]')?.click()">🏠 Home</button>
-  <button class="bottom-btn {fav_active}" onclick="document.querySelector('button[kind=nav_fav]')?.click()">❤️ Fav</button>
-  <button class="bottom-btn {admin_active}" onclick="document.querySelector('button[kind=nav_admin]')?.click()">➕ Admin</button>
+  <button class="bottom-btn {'active' if active_tab == 'home' else ''}" onclick="document.querySelector('button[kind=nav_home]')?.click()">🏠 Home</button>
+  <button class="bottom-btn {'active' if active_tab == 'favorites' else ''}" onclick="document.querySelector('button[kind=nav_fav]')?.click()">❤️ Fav</button>
+  <button class="bottom-btn {'active' if active_tab == 'admin' else ''}" onclick="document.querySelector('button[kind=nav_admin]')?.click()">➕ Admin</button>
 </div>
-""".format(
-    home_active="active" if st.session_state["active_tab"] == "home" else "",
-    fav_active="active" if st.session_state["active_tab"] == "favorites" else "",
-    admin_active="active" if st.session_state["active_tab"] == "admin" else "",
-)
+"""
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# Invisible helper buttons (JS clicks them) to change Streamlit session state
+# 🔹 Invisible buttons for navigation (must come after set_tab)
 if st.button("nav_home", key="nav_home", help="nav home", on_click=lambda: set_tab("home")):
     pass
 if st.button("nav_fav", key="nav_fav", help="nav fav", on_click=lambda: set_tab("favorites")):
@@ -631,12 +639,3 @@ if st.button("nav_fav", key="nav_fav", help="nav fav", on_click=lambda: set_tab(
 if st.button("nav_admin", key="nav_admin", help="nav admin", on_click=lambda: set_tab("admin")):
     pass
 
-# small helper to set tab (must be defined after the buttons)
-def set_tab(tab_name):
-    st.session_state["active_tab"] = tab_name
-    # toggle admin sheet visibility
-    st.session_state["show_admin_sheet"] = tab_name == "admin"
-    st.session_state["selected_singer"] = None
-    st.session_state["show_favorites"] = (tab_name == "favorites")
-    st.session_state["playing_song"] = None
-    st.experimental_rerun()
