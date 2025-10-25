@@ -8,47 +8,6 @@ from streamlit_autorefresh import st_autorefresh
 
 # ---------------------- CONFIG ----------------------
 st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
-# ✅ Custom Sidebar Toggle Button for Mobile
-toggle_sidebar_js = """
-    <script>
-        function toggleSidebar() {
-            var sidebar = parent.document.querySelector('section[data-testid="stSidebar"]');
-            if (sidebar.style.transform === 'translateX(-100%)') {
-                sidebar.style.transform = 'translateX(0)';
-            } else {
-                sidebar.style.transform = 'translateX(-100%)';
-            }
-        }
-    </script>
-
-    <style>
-        .sidebar-toggle {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            background-color: #007BFF;
-            color: white;
-            padding: 10px 14px;
-            font-size: 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-
-        /* ✅ Sidebar visible by default on all screens */
-        @media (max-width: 768px) {
-            section[data-testid="stSidebar"] {
-                transform: translateX(0);
-                transition: transform 0.3s ease-in-out;
-            }
-        }
-    </style>
-
-    <div class="sidebar-toggle" onclick="toggleSidebar()">☰</div>
-"""
-st.markdown(toggle_sidebar_js, unsafe_allow_html=True)
-
 
 # ---- Hide Streamlit Branding (Footer + Header + Menu Icon) ----
 hide_streamlit_style = """
@@ -518,7 +477,7 @@ if "playing_song" not in st.session_state:
 
 # ---------------------- SIDEBAR --------------------
 with st.sidebar:
-    st.markdown("<h4 style='text-align:center; color:#007BFF;'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
+    #st.markdown("<h4 style='text-align:center; color:#007BFF;'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
     with st.form("upload_form", clear_on_submit=True):
         singer_choice = st.selectbox("Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"])
         song_title = st.text_input("Song Title")
