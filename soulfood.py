@@ -315,7 +315,10 @@ html, body, [data-testid="stAppViewContainer"] {
 # ---------------------- HEADER / PLAYER HELPERS ----------------------
 def show_header(compact=False):
     # Auto refresh every 30s for verse
-    st_autorefresh(interval=30000, key=f"verse_refresh_{st.session_state.get('selected_singer', 'home')}")
+    selected_singer = st.session_state.get("selected_singer") or "home"
+    st_autorefresh(interval=30000, key=f"verse_refresh_{selected_singer}")
+
+
 
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
     verse = BIBLE_VERSES[verse_index]
