@@ -187,17 +187,7 @@ def audio_data_url(file_path):
 
 
 
-# ---------------------- THEME TOGGLE (SIDEBAR) ----------------------
-if "dark_mode" not in st.session_state:
-    st.session_state["dark_mode"] = False  # Default = Light Mode
 
-# Apply base CSS first (light design)
-st.markdown(BASE_CSS, unsafe_allow_html=True)
-# Apply theme-specific CSS on top of base
-if st.session_state["dark_mode"]:
-    st.markdown(DARK_CSS, unsafe_allow_html=True)
-else:
-    st.markdown(LIGHT_CSS, unsafe_allow_html=True)
 
 # ---------------------- HEADER / PLAYER HELPERS ---------------------
 def show_header():
