@@ -639,7 +639,7 @@ def show_header(compact=False):
 if st.session_state.get("show_favorites"):
     unique_page = "favorites"
 
-st_autorefresh(interval=30000, key=f"verse_refresh_{unique_page}_{int(time.time() * 1000) % 1000}")
+    st_autorefresh(interval=30000, key=f"verse_refresh_{unique_page}_{int(time.time() * 1000) % 1000}")
 
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
     verse = BIBLE_VERSES[verse_index]
