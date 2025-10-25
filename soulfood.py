@@ -1,4 +1,3 @@
-# soulfood_mobile.py
 import streamlit as st
 from pathlib import Path
 import os
@@ -8,7 +7,7 @@ import time
 from streamlit_autorefresh import st_autorefresh
 
 # ---------------------- CONFIG ----------------------
-st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
 
 # ---------------------- DATABASE ----------------------
 DB_PATH = "database.db"
@@ -63,10 +62,6 @@ SINGERS = {
     },
 }
 
-PLACEHOLDER_IMG = "data:image/svg+xml;base64," + base64.b64encode(bytes(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="#e9eef8"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#7b8aa5" font-size="22">No Image</text></svg>', "utf-8"
-)).decode()
-
 BIBLE_VERSES = [
     "🎵 Psalm 100:1 — Make a joyful noise unto the Lord, all ye lands.",
     "🎵 Isaiah 12:5 — Sing unto the Lord; for He hath done excellent things.",
@@ -82,6 +77,9 @@ BIBLE_VERSES = [
 
 # ---------------------- AUTO SYNC ------------------
 def auto_sync_songs():
+    """
+    Scans singer folders for .mp3 files and inserts them into the songs table if missing.
+    """
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT file_path FROM songs")
@@ -91,6 +89,7 @@ def auto_sync_songs():
         folder = Path(data["folder"])
         folder.mkdir(parents=True, exist_ok=True)
         for file in folder.glob("*.mp3"):
+            # normalize path string
             file_str = str(file)
             if file_str not in existing_files:
                 title = file.stem.replace("_", " ").title()
@@ -112,22 +111,13 @@ def image_to_base64(image_path):
             ext = "jpeg"
         return f"data:image/{ext};base64,{b64}"
     except Exception:
-        return PLACEHOLDER_IMG
+        return ""
 
 
 def get_songs_by_singer(singer_key):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id, title, file_path FROM songs WHERE singer=? ORDER BY id DESC", (singer_key,))
-    songs = cur.fetchall()
-    conn.close()
-    return songs
-
-
-def get_all_songs():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id, singer, title, file_path FROM songs ORDER BY id DESC")
+    cur.execute("SELECT id, title, file_path FROM songs WHERE singer=?", (singer_key,))
     songs = cur.fetchall()
     conn.close()
     return songs
@@ -180,10 +170,11 @@ def delete_song(song_id):
     st.success("🗑️ Song deleted successfully!")
     if st.session_state.get("playing_song") == song_id:
         st.session_state["playing_song"] = None
-    st.experimental_rerun()
+    st.rerun()
 
 
 def audio_data_url(file_path):
+    """Return a data URL for an mp3 file to use in an HTML audio tag (base64)."""
     try:
         with open(file_path, "rb") as f:
             b = f.read()
@@ -193,150 +184,169 @@ def audio_data_url(file_path):
         return None
 
 
-# ---------------------- MOBILE STYLE CSS ------------------------
-MOBILE_CSS = """
+# ---------------------- CSS (RESPONSIVE) ------------------------
+BASE_CSS = """
 <style>
-/* Reset for Streamlit content area to look like mobile */
-.css-18e3th9 { padding: 0rem; } /* top-level container padding might vary by Streamlit version */
-.css-1d391kg { padding-top: 0rem; } /* title area */
-[data-testid="stAppViewContainer"] > .main { padding: 0px 0px !important; }
+:root {
+  --bg: #f6f9fc;
+  --card: #ffffff;
+  --muted: #5b6876;
+  --primary: #007BFF;
+  --text: #0b1730;
+  --accent: #0b63d4;
+  --shadow: rgba(2,6,23,0.06);
+}
 
-/* App background + container */
-.app-shell {
-    max-width: 480px;
-    margin: 0 auto;
-    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
-    min-height: 100vh;
-    position: relative;
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    color: #0b1730;
 }
 
-/* Top header (small) */
-.app-top {
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(11,23,48,0.05);
-    background: transparent;
+/* Header */
+.header {
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: 6px;
 }
-.app-title {
+.title {
+    color: var(--primary);
     font-weight: 800;
-    font-size: 18px;
-    color: #0b63d4;
+    margin-bottom: 4px;
 }
 
-/* Verse */
+/* Verse box */
 .verse-box {
-    margin: 12px;
-    background: rgba(14,99,212,0.06);
-    border-left: 4px solid #0b63d4;
-    padding: 10px 12px;
+    background-color: #e8f0fe;
+    border-left: 5px solid var(--primary);
     border-radius: 10px;
+    padding: 10px 15px;
+    text-align: center;
     font-style: italic;
-    font-size: 14px;
+    color: var(--text);
+    font-size: 16px;
+    margin-top: 8px;
+    animation: fadeIn 1s ease-in-out;
 }
 
-/* Content area */
-.content {
-    padding: 12px;
-    padding-bottom: 92px; /* space for bottom nav + sticky player */
+/* Singer grid */
+.singer-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
 }
 
-/* Singer/ Song cards */
-.card {
-    background: white;
+.singer-card {
+    background-color: var(--card);
     border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(11,23,48,0.06);
-    padding: 12px;
-    margin-bottom: 12px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: all 0.28s ease;
 }
-.card .img {
-    width: 68px;
-    height: 68px;
-    border-radius: 12px;
+.singer-card:hover {
+    transform: translateY(-6px);
+}
+
+/* Singer image circle */
+.singer-img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
-    border: 3px solid #e9f2ff;
-}
-.card .meta { flex: 1; min-width: 0; }
-.title-small { font-weight:700; font-size:15px; margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.subtitle { font-size:13px; color:#6b7785; }
-
-/* Buttons */
-.btn-row { display:flex; gap:8px; margin-top:8px; }
-.btn { padding:8px 12px; border-radius:10px; font-weight:600; border:none; cursor:pointer; min-width:80px; }
-.btn-ghost { background: transparent; border: 1px solid rgba(11,23,48,0.06); }
-.btn-primary { background: #0b63d4; color: #fff; }
-.btn-fav { background: linear-gradient(90deg,#ff8fab,#ff6a9a); color: #fff; }
-
-/* Bottom Navigation */
-.bottom-nav {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 8px;
-    width: 94%;
-    max-width: 480px;
-    background: white;
-    border-radius: 14px;
-    box-shadow: 0 12px 40px rgba(11,23,48,0.08);
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 8px;
-    z-index: 9999;
+    margin-bottom: 12px;
+    border: 4px solid var(--primary);
 }
 
-/* Sticky player above bottom-nav */
-.sticky-player {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 76px;
-    width: 94%;
-    max-width: 480px;
-    background: white;
+/* Song grid */
+.song-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
+}
+
+.song-card {
+    background: var(--card);
     border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(11,23,48,0.08);
-    padding: 10px;
-    display: none; /* toggled visible by inline style from python */
+    padding: 14px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: transform .22s ease, box-shadow .22s ease;
+}
+.song-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px var(--shadow); }
+.song-card h4 { margin: 8px 0 10px 0; }
+
+/* Buttons layout */
+.controls-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+.btn { padding:10px 12px; border-radius:10px; font-weight:600; border:none; cursor:pointer; }
+.btn-ghost { background: transparent; border: 1px solid rgba(0,0,0,0.06); }
+.btn-primary { background: var(--primary); color: #fff; }
+
+/* Sidebar responsive: when screen small, sidebar becomes full width */
+@media (max-width: 700px) {
+    section[data-testid="stSidebar"] { position: relative !important; width: 100% !important; min-width: unset !important; z-index:9999; }
+    .singer-img { width: 120px; height:120px; }
+}
+
+/* Sticky bottom player */
+#sticky-player {
+    position: fixed;
+    left: 15%;
+    right: 15%;
+    bottom: 18px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 40px var(--shadow);
+    display: none; /* toggled visible by JS/CSS when playing */
     align-items: center;
-    gap: 10px;
+    justify-content: center;
     z-index: 9998;
 }
 
-/* small player title */
-.player-title { font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* If viewport small, make player full width bottom */
+@media (max-width: 900px) {
+    #sticky-player { left: 8px; right: 8px; }
+}
 
-/* Utility */
-.center { text-align:center; }
-.small-note { font-size:13px; color:#6b7785; margin-top:8px; text-align:center; }
+/* simple fade animation */
+@keyframes fadeIn { from { opacity: 0;} to { opacity: 1; } }
+
+.small-note { color: var(--muted); font-size:13px; margin-top:6px; text-align:center; }
+
 </style>
 """
 
 # ---------------------- HEADER / PLAYER HELPERS ----------------------
-def render_top_header():
-    st.markdown("<div class='app-top'>", unsafe_allow_html=True)
-    st.markdown("<div style='display:flex; gap:10px; align-items:center;'><img src='https://raw.githubusercontent.com/github/explore/main/topics/music/music.png' width='34' style='border-radius:8px;'/><div class='app-title'>SoulFood</div></div>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:13px; color:#6b7785;'>Mobile UI</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-def show_verse():
+def show_header():
+    # Auto refresh every 30s for verse
+    st_autorefresh(interval=30000, key="verse_refresh")
+    st.markdown("<div class='header'>", unsafe_allow_html=True)
+    st.markdown("<h1 class='title'>🎵 SoulFood – پرستش 🎵</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='small-note'>Gospel Music Player — Mobile & Desktop friendly</p>", unsafe_allow_html=True)
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
     verse = BIBLE_VERSES[verse_index]
     st.markdown(f"<div class='verse-box'>{verse}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("---", unsafe_allow_html=True)
 
 
-def render_sticky_player():
+def show_sticky_player_if_playing():
     playing_id = st.session_state.get("playing_song")
     if not playing_id:
-        # ensure hidden via CSS style
-        st.markdown("<div class='sticky-player' id='sticky-player' style='display:none;'></div>", unsafe_allow_html=True)
         return
 
     conn = get_conn()
@@ -345,192 +355,237 @@ def render_sticky_player():
     row = cur.fetchone()
     conn.close()
     if not row:
-        st.markdown("<div class='sticky-player' id='sticky-player' style='display:none;'></div>", unsafe_allow_html=True)
         return
     title, file_path = row
+    if not file_path or not os.path.exists(file_path):
+        st.warning("⚠️ Playing file missing.")
+        return
+
     data_url = audio_data_url(file_path)
     if not data_url:
-        st.markdown("<div class='sticky-player' id='sticky-player' style='display:none;'></div>", unsafe_allow_html=True)
         st.warning("⚠️ Cannot load audio for sticky player.")
         return
 
-    # Show player with full controls (seek supported)
+    # Render a minimal HTML audio player fixed at bottom with controls & title
     player_html = f"""
-    <div class="sticky-player" id="sticky-player" style="display:flex;">
-      <div style="flex:1; min-width:0;">
-        <div class="player-title">🎧 {title}</div>
-        <audio id="global-audio" controls style="width:100%; margin-top:6px;">
-          <source src="{data_url}" type="audio/mp3">
-          Your browser does not support audio.
-        </audio>
+    <div id="sticky-player" style="display:flex; gap:12px; align-items:center; justify-content:center;">
+      <div style="font-weight:700; min-width:180px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+        🎧 {title}
       </div>
-      <div style="width:10px;"></div>
+      <audio id="sticky-audio" controls style="max-width:70%; width:100%;">
+        <source src="{data_url}" type="audio/mp3">
+        Your browser does not support the audio element.
+      </audio>
+      <div style="min-width:80px; display:flex; gap:6px; justify-content:center;">
+        <button onclick="document.getElementById('sticky-audio').pause();" style="padding:8px;border-radius:8px;">⏸️</button>
+        <button onclick="document.getElementById('sticky-audio').play();" style="padding:8px;border-radius:8px;">▶️</button>
+      </div>
     </div>
     <script>
-      // Scroll sticky player into view on mobile when appear
-      setTimeout(()=>{{ document.getElementById('sticky-player')?.scrollIntoView({{behavior:'smooth', block:'end'}}); }}, 80);
+      const p = document.getElementById('sticky-player');
+      if (p) p.style.display = 'flex';
     </script>
     """
     st.markdown(player_html, unsafe_allow_html=True)
 
 
 # ---------------------- VIEWS ----------------------
-def view_home():
-    st.markdown("<div class='content'>", unsafe_allow_html=True)
-    show_verse()
-    st.markdown("<h4 style='margin:12px 0 6px 6px;'>Artists</h4>", unsafe_allow_html=True)
+def show_singers():
+    show_header()
+    st.info(
+        """
+        📱 **Mobile tip:** Tap the top-left menu (≡) for the Admin Panel.  
+        Use the buttons under each singer to open their songs.
+        """,
+        icon="ℹ️",
+    )
+    st.markdown("<h3 style='text-align:center; margin-top:6px;'>Select a Singer</h3>", unsafe_allow_html=True)
+    st.markdown('<div class="singer-row">', unsafe_allow_html=True)
 
-    # Singer short list horizontally (we'll keep a vertical style for mobile)
     for key, data in SINGERS.items():
-        img_src = image_to_base64(data["image"])
+        img_src = image_to_base64(data["image"]) if os.path.exists(data["image"]) else ""
         st.markdown(
             f"""
-            <div class='card' style='align-items:center;'>
-                <img class='img' src='{img_src}'/>
-                <div class='meta'>
-                    <div class='title-small'>{data['name']}</div>
-                    <div class='subtitle'>Tap to open songs</div>
-                    <div style='margin-top:8px;'>
-                        <button onclick="document.getElementById('open_{key}').click()" class='btn btn-primary'>Open</button>
-                    </div>
+            <div class="singer-card">
+                <img src="{img_src}" class="singer-img" alt="{data['name']}">
+                <h4 style="margin-bottom:6px;">{data['name']}</h4>
+                <div style="margin-top:8px;">
+                    <button onclick="document.querySelector('button[kind=play_{key}]')?.click()" class="btn btn-primary">🎤 Listen</button>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        if st.button("Open", key=f"open_{key}", args=None):
-            st.session_state["page"] = "artist"
+        if st.button(f"Open {data['name']}", key=f"open_{key}"):
             st.session_state["selected_singer"] = key
+            st.session_state["show_favorites"] = False
             st.session_state["playing_song"] = None
-            st.experimental_rerun()
-
-    st.markdown("<h4 style='margin-top:8px;'>Recent Uploads</h4>", unsafe_allow_html=True)
-    songs = get_all_songs()[:8]
-    if not songs:
-        st.markdown("<div class='small-note'>No songs uploaded yet. Use Upload tab to add songs.</div>", unsafe_allow_html=True)
-    for song in songs:
-        song_id, singer, title, file_path = song
-        img_src = image_to_base64(SINGERS.get(singer, {}).get("image", ""))
-        fav_ids = get_favorites()
-        fav_heart = "❤️" if song_id in fav_ids else "🤍"
-        data_url = audio_data_url(file_path) or ""
-        st.markdown(
-            f"""
-            <div class='card'>
-                <img class='img' src='{img_src}'/>
-                <div class='meta'>
-                    <div class='title-small'>{title}</div>
-                    <div class='subtitle'>{SINGERS.get(singer,{{}}).get('name','')}</div>
-                    <div class='btn-row'>
-                        <form>
-                          <button class='btn btn-primary' onclick="document.getElementById('play_{song_id}').click();return false;">Play</button>
-                        </form>
-                        <button class='btn btn-ghost' onclick="document.getElementById('fav_{song_id}').click();return false;">{fav_heart}</button>
-                        <button class='btn btn-ghost' onclick="document.getElementById('del_{song_id}').click();return false;">Delete</button>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        # hidden streamlit buttons to handle actions
-        if st.button("Play", key=f"play_{song_id}", args=None):
-            st.session_state["playing_song"] = song_id
-            st.session_state["selected_singer"] = None
-            st.session_state["page"] = "home"
-            st.experimental_rerun()
-        if st.button("Fav", key=f"fav_{song_id}", args=None):
-            toggle_favorite(song_id)
-            st.experimental_rerun()
-        if st.button("Del", key=f"del_{song_id}", args=None):
-            delete_song(song_id)
-
+            st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def view_artist(singer_key):
-    st.markdown("<div class='content'>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='margin:6px 6px;'>🎤 {SINGERS[singer_key]['name']}</h3>", unsafe_allow_html=True)
+def show_songs(singer_key):
+    show_header()
     songs = get_songs_by_singer(singer_key)
     fav_ids = get_favorites()
+
+    st.markdown(f"<h3 style='text-align:center; margin-top:6px;'>{SINGERS[singer_key]['name']} Songs</h3>", unsafe_allow_html=True)
+
+    if st.button("⬅️ Back to Singers", key="back_top"):
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.session_state["show_favorites"] = False
+        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     if not songs:
-        st.markdown("<div class='small-note'>No songs found for this artist yet.</div>", unsafe_allow_html=True)
+        st.info("No songs found for this singer.")
+        return
+
+    st.markdown('<div class="song-grid">', unsafe_allow_html=True)
+
     for song_id, title, file_path in songs:
         fav_heart = "❤️" if song_id in fav_ids else "🤍"
-        img_src = image_to_base64(SINGERS[singer_key]["image"])
-        data_url = audio_data_url(file_path) or ""
+        st.markdown("<div class='song-card'>", unsafe_allow_html=True)
+        st.markdown(f"<h4>🎵 {title}</h4>", unsafe_allow_html=True)
+
+        # Show inline audio player only when playing this song (so grid stays small)
+        if st.session_state.get("playing_song") == song_id:
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, "rb") as f:
+                        st.audio(f.read(), format="audio/mp3")
+                except Exception:
+                    st.warning("⚠️ Failed to load audio file.")
+            else:
+                st.warning("⚠️ Audio file missing!")
+
+        # Buttons in a row
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            if st.session_state.get("playing_song") == song_id:
+                if st.button("⏸️ Stop", key=f"stop_{song_id}"):
+                    st.session_state["playing_song"] = None
+                    st.rerun()
+            else:
+                if st.button("▶️ Play", key=f"play_{song_id}"):
+                    st.session_state["playing_song"] = song_id
+                    st.rerun()
+
+        with c2:
+            if st.button(fav_heart + " Favorite", key=f"fav_{song_id}"):
+                toggle_favorite(song_id)
+                st.rerun()
+
+        with c3:
+            if st.button("🗑️ Delete", key=f"del_{song_id}"):
+                delete_song(song_id)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def show_favorites_view():
+    show_header()
+    fav_ids = get_favorites()
+
+    if not fav_ids:
+        st.info("No favorites yet! Add some songs you love ❤️")
+        return
+
+    conn = get_conn()
+    cur = conn.cursor()
+    placeholders = ",".join(["?"] * len(fav_ids))
+    cur.execute(f"SELECT id, title, file_path FROM songs WHERE id IN ({placeholders})", fav_ids)
+    favs = cur.fetchall()
+    conn.close()
+
+    st.markdown("<h3 style='text-align:center; margin-top:6px;'>❤️ Your Favorite Songs</h3>", unsafe_allow_html=True)
+    if st.button("⬅️ Back to Singers"):
+        st.session_state["show_favorites"] = False
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.rerun()
+
+    for song_id, title, file_path in favs:
         st.markdown(
-            f"""
-            <div class='card'>
-                <img class='img' src='{img_src}'/>
-                <div class='meta'>
-                    <div class='title-small'>{title}</div>
-                    <div class='subtitle'>{SINGERS[singer_key]['name']}</div>
-                    <div class='btn-row'>
-                        <button class='btn btn-primary' onclick="document.getElementById('play_{song_id}').click();return false;">Play</button>
-                        <button class='btn btn-ghost' onclick="document.getElementById('fav_{song_id}').click();return false;">{fav_heart}</button>
-                        <button class='btn btn-ghost' onclick="document.getElementById('del_{song_id}').click();return false;">Delete</button>
-                    </div>
-                </div>
-            </div>
-            """,
+            f"<div style='text-align:center; background:var(--card); padding:15px; border-radius:12px; "
+            f"box-shadow: 0 8px 20px var(--shadow); margin-bottom:16px;'>"
+            f"<h4>🎵 {title}</h4>",
             unsafe_allow_html=True,
         )
-        if st.button("Play", key=f"play_{song_id}", args=None):
-            st.session_state["playing_song"] = song_id
-            st.experimental_rerun()
-        if st.button("Fav", key=f"fav_{song_id}", args=None):
-            toggle_favorite(song_id)
-            st.experimental_rerun()
-        if st.button("Del", key=f"del_{song_id}", args=None):
-            delete_song(song_id)
-    st.markdown("</div>", unsafe_allow_html=True)
 
+        if st.session_state.get("playing_song") == song_id:
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, "rb") as f:
+                        st.audio(f.read(), format="audio/mp3")
+                except Exception:
+                    st.warning("⚠️ Failed to load audio file.")
+            else:
+                st.warning("⚠️ Audio file missing!")
 
-def view_favorites():
-    st.markdown("<div class='content'>", unsafe_allow_html=True)
-    st.markdown("<h3 style='margin:6px;'>❤️ Favorites</h3>", unsafe_allow_html=True)
-    fav_ids = get_favorites()
-    if not fav_ids:
-        st.markdown("<div class='small-note'>No favorites yet. Tap ❤️ on any song to add it here.</div>", unsafe_allow_html=True)
-    else:
-        conn = get_conn()
-        cur = conn.cursor()
-        placeholders = ",".join(["?"] * len(fav_ids))
-        cur.execute(f"SELECT id, title, file_path, singer FROM songs WHERE id IN ({placeholders})", fav_ids)
-        favs = cur.fetchall()
-        conn.close()
-        for row in favs:
-            song_id, title, file_path, singer = row
-            img_src = image_to_base64(SINGERS.get(singer, {}).get("image", ""))
-            st.markdown(
-                f"""
-                <div class='card'>
-                    <img class='img' src='{img_src}'/>
-                    <div class='meta'>
-                        <div class='title-small'>{title}</div>
-                        <div class='subtitle'>{SINGERS.get(singer,{{}}).get('name','')}</div>
-                        <div class='btn-row'>
-                            <button class='btn btn-primary' onclick="document.getElementById('play_{song_id}').click();return false;">Play</button>
-                            <button class='btn btn-ghost' onclick="document.getElementById('remove_{song_id}').click();return false;">Remove</button>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            if st.button("Play", key=f"play_{song_id}", args=None):
-                st.session_state["playing_song"] = song_id
-                st.experimental_rerun()
-            if st.button("Remove", key=f"remove_{song_id}", args=None):
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            if st.session_state.get("playing_song") == song_id:
+                if st.button("⏸️ Stop", key=f"stopfav_{song_id}"):
+                    st.session_state["playing_song"] = None
+                    st.rerun()
+            else:
+                if st.button("▶️ Play", key=f"playfav_{song_id}"):
+                    st.session_state["playing_song"] = song_id
+                    st.rerun()
+        with c2:
+            if st.button("💔 Remove", key=f"remove_fav_{song_id}"):
                 toggle_favorite(song_id)
-                st.experimental_rerun()
+                st.rerun()
+            if st.button("🗑️ Delete", key=f"delete_fav_{song_id}"):
+                delete_song(song_id)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ---------------------- APP START ------------------
+create_tables()
+auto_sync_songs()
+
+if "selected_singer" not in st.session_state:
+    st.session_state["selected_singer"] = None
+if "show_favorites" not in st.session_state:
+    st.session_state["show_favorites"] = False
+if "playing_song" not in st.session_state:
+    st.session_state["playing_song"] = None
+
+# Insert base CSS
+st.markdown(BASE_CSS, unsafe_allow_html=True)
+
+# ---------------------- SIDEBAR (responsive + upload) --------------------
+with st.sidebar:
+    st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # Add new singer (optional small form)
+    with st.expander("➕ Add Singer (optional)", expanded=False):
+        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)")
+        new_singer_name = st.text_input("Singer name")
+        new_singer_img = st.text_input("Image path (optional)")
+        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)")
+        if st.button("Add Singer"):
+            if not new_singer_key or not new_singer_name:
+                st.error("Please provide both key and name.")
+            else:
+                key = new_singer_key.strip()
+                folder = new_singer_folder.strip() or f"audio/{key}"
+                SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
+                Path(folder).mkdir(parents=True, exist_ok=True)
+                st.success(f"Added singer {new_singer_name}")
+                st.rerun()
 
-def view_upload():
-    st.markdown("<div class='content'>", unsafe_allow_html=True)
-    st.markdown("<h3 style='margin:6px;'>➕ Upload Song</h3>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # Upload form
     with st.form("upload_form", clear_on_submit=True):
         singer_choice = st.selectbox("Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"])
         song_title = st.text_input("Song Title")
@@ -558,100 +613,24 @@ def view_upload():
                 conn.commit()
                 conn.close()
                 st.success(f"✅ Song '{song_title}' uploaded successfully!")
-                time.sleep(0.6)
+                time.sleep(0.5)
                 auto_sync_songs()
-                st.experimental_rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+                st.rerun()
 
+    st.markdown("---")
+    if st.button("❤️ View Favorites"):
+        st.session_state["show_favorites"] = True
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.rerun()
 
-def view_settings():
-    st.markdown("<div class='content'>", unsafe_allow_html=True)
-    st.markdown("<h3 style='margin:6px;'>⚙️ Settings</h3>", unsafe_allow_html=True)
-    st.markdown("<div class='small-note'>Mobile-style Streamlit UI. Use Upload to add songs, Favorites to manage liked songs.</div>", unsafe_allow_html=True)
-    st.markdown("<div style='height:160px;'></div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ---------------------- APP START ------------------
-create_tables()
-auto_sync_songs()
-
-# session defaults
-if "page" not in st.session_state:
-    st.session_state["page"] = "home"
-if "selected_singer" not in st.session_state:
-    st.session_state["selected_singer"] = None
-if "playing_song" not in st.session_state:
-    st.session_state["playing_song"] = None
-
-# load CSS
-st.markdown(MOBILE_CSS, unsafe_allow_html=True)
-
-# main app shell
-st.markdown("<div class='app-shell'>", unsafe_allow_html=True)
-render_top_header()
-
-# small auto refresh for verse
-st_autorefresh(interval=30000, key="verse_refresh")
-
-# route pages
-page = st.session_state["page"]
-if page == "home":
-    view_home()
-elif page == "artist":
-    key = st.session_state.get("selected_singer")
-    if key:
-        view_artist(key)
-    else:
-        st.session_state["page"] = "home"
-        st.experimental_rerun()
-elif page == "favorites":
-    view_favorites()
-elif page == "upload":
-    view_upload()
-elif page == "settings":
-    view_settings()
+# ---------------------- MAIN VIEW ------------------
+if st.session_state["show_favorites"]:
+    show_favorites_view()
+elif st.session_state["selected_singer"]:
+    show_songs(st.session_state["selected_singer"])
 else:
-    view_home()
+    show_singers()
 
-# sticky player
-render_sticky_player()
-
-# bottom navigation area (using streamlit buttons placed inside a fixed-bottom styled div)
-bottom_nav_html = """
-<div style="height:86px;"></div> <!-- spacer to allow scroll above fixed bottom -->
-<div class='bottom-nav'>
-  <div style='text-align:center; font-size:13px;'>
-    <form><button class='btn btn-ghost' onclick="document.getElementById('nav_home').click();return false;">🏠<div style='font-size:11px;'>Home</div></button></form>
-  </div>
-  <div style='text-align:center; font-size:13px;'>
-    <form><button class='btn btn-ghost' onclick="document.getElementById('nav_fav').click();return false;">❤️<div style='font-size:11px;'>Favs</div></button></form>
-  </div>
-  <div style='text-align:center; font-size:13px;'>
-    <form><button class='btn btn-primary' onclick="document.getElementById('nav_upload').click();return false;">➕<div style='font-size:11px;'>Upload</div></button></form>
-  </div>
-  <div style='text-align:center; font-size:13px;'>
-    <form><button class='btn btn-ghost' onclick="document.getElementById('nav_settings').click();return false;">⚙️<div style='font-size:11px;'>More</div></button></form>
-  </div>
-</div>
-"""
-st.markdown(bottom_nav_html, unsafe_allow_html=True)
-
-# hidden streamlit buttons to catch bottom nav clicks
-if st.button("nav_home", key="nav_home"):
-    st.session_state["page"] = "home"
-    st.session_state["selected_singer"] = None
-    st.experimental_rerun()
-if st.button("nav_fav", key="nav_fav"):
-    st.session_state["page"] = "favorites"
-    st.experimental_rerun()
-if st.button("nav_upload", key="nav_upload"):
-    st.session_state["page"] = "upload"
-    st.experimental_rerun()
-if st.button("nav_settings", key="nav_settings"):
-    st.session_state["page"] = "settings"
-    st.experimental_rerun()
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# end of file
+# sticky bottom player area (rendered regardless; its internal JS toggles display)
+show_sticky_player_if_playing()
