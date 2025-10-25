@@ -1,3 +1,4 @@
+# soulfood.py
 import streamlit as st
 from pathlib import Path
 import os
@@ -337,26 +338,77 @@ DARK_CSS = """
 <style>
 /* Background */
 html, body, [class*="css"] {
-    background-color: #121212 !important;
+    background-color: #0a0a0a !important;
     color: #ffffff !important;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: #1E1E1E !important;
+    background-color: #0f0f0f !important;
     color: white !important;
+}
+
+/* Cards & panels */
+.singer-card, .song-card, .verse-box, .st-expander, .stForm {
+    background-color: #0b0b0b !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.03) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.75) !important;
+}
+
+/* Header text */
+.title, .header, h1, h2, h3, h4, p, label {
+    color: #FFFFFF !important;
+}
+
+/* Singer image border */
+.singer-img {
+  border: 3px solid rgba(255,255,255,0.06) !important;
 }
 
 /* Buttons */
-button, .stButton>button {
-    background-color: #007BFF !important;
-    color: white !important;
-    border-radius: 8px !important;
+button, .stButton>button, .stDownloadButton>button {
+  background-color: #17202a !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  border-radius: 8px !important;
 }
 
-/* Card Titles, Text, Headers */
-h1, h2, h3, h4, h5, h6, p, span, label {
-    color: #EAEAEA !important;
+/* Inputs */
+input, textarea, select {
+  background-color: #121212 !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255,255,255,0.03) !important;
+}
+
+/* Verse box tweak */
+.verse-box {
+  background-color: rgba(255,255,255,0.02) !important;
+  border-left: 5px solid #1e90ff !important;
+}
+
+/* Audio element — try to invert controls so they appear lighter */
+audio {
+  filter: invert(1) hue-rotate(180deg) brightness(1.05);
+}
+
+/* Scrollbar (dark) */
+::-webkit-scrollbar { width: 8px; height:8px; }
+::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+::-webkit-scrollbar-track { background: #000; }
+
+/* Sticky player override to match dark card */
+#sticky-player {
+  background-color: #0b0b0b !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.03) !important;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  section[data-testid="stSidebar"] { position: relative !important; width: 100% !important; min-width: unset !important; z-index: 9999; }
+  .singer-img { width: 120px; height: 120px; }
+  #sticky-player { left: 8px !important; right: 8px !important; }
 }
 </style>
 """
@@ -364,42 +416,29 @@ h1, h2, h3, h4, h5, h6, p, span, label {
 # ---------------------- LIGHT MODE CSS ----------------------
 LIGHT_CSS = """
 <style>
+/* ensure base light BG looks clean */
 html, body {
     background-color: #F7F7F7 !important;
-    color: black !important;
+    color: #0b1730 !important;
 }
 section[data-testid="stSidebar"] {
     background-color: #FFFFFF !important;
-    color: black !important;
+    color: #0b1730 !important;
 }
 </style>
 """
 
-
-# ---------------------- THEME TOGGLE ----------------------
+# ---------------------- THEME TOGGLE (SIDEBAR) ----------------------
 if "dark_mode" not in st.session_state:
-    st.session_state["dark_mode"] = False   # Default = Light Mode
+    st.session_state["dark_mode"] = False  # Default = Light Mode
 
-# Sidebar Toggle Switch
-with st.sidebar:
-    toggle = st.checkbox("🌙 Dark Mode (Press 'B' to toggle)", value=st.session_state["dark_mode"])
-    st.session_state["dark_mode"] = toggle
-
-# Keyboard Shortcut: "B" = Toggle Dark/Light
-pressed_key = st.session_state.get("pressed_key", "")
-
-if pressed_key.lower() == "b":
-    st.session_state["dark_mode"] = not st.session_state["dark_mode"]
-    st.session_state["pressed_key"] = ""  # Reset key to avoid loop
-    st.rerun()
-
-# Apply CSS Based on Mode
+# Apply base CSS first (light design)
+st.markdown(BASE_CSS, unsafe_allow_html=True)
+# Apply theme-specific CSS on top of base
 if st.session_state["dark_mode"]:
     st.markdown(DARK_CSS, unsafe_allow_html=True)
 else:
     st.markdown(LIGHT_CSS, unsafe_allow_html=True)
-
-
 
 # ---------------------- HEADER / PLAYER HELPERS ---------------------
 def show_header():
@@ -458,7 +497,6 @@ def show_sticky_player_if_playing():
       // make the sticky player visible
       const p = document.getElementById('sticky-player');
       if (p) p.style.display = 'flex';
-      // ensure audio stops when session state playing_song becomes null (user actions still needed)
     </script>
     """
     st.markdown(player_html, unsafe_allow_html=True)
@@ -486,14 +524,14 @@ def show_singers():
                 <img src="{img_src}" class="singer-img" alt="{data['name']}">
                 <h4 style="margin-bottom:6px;">{data['name']}</h4>
                 <div style="margin-top:8px;">
-                    <button onclick="document.querySelector('button[kind=play_{key}]')?.click()" class="btn btn-primary">🎤 Listen</button>
+                    <button class="btn btn-primary" onclick="document.querySelector('button[aria-label=\'open_{key}\']')?.click()">🎤 Listen</button>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
         # separate Streamlit button that actually triggers selection
-        if st.button(f"Open {data['name']}", key=f"open_{key}"):
+        if st.button(f"Open {data['name']}", key=f"open_{key}", help=f"Open {data['name']} songs"):
             st.session_state["selected_singer"] = key
             st.session_state["show_favorites"] = False
             st.session_state["playing_song"] = None
@@ -636,23 +674,17 @@ if "playing_song" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state["dark_mode"] = False
 
-# Insert base CSS
-st.markdown(BASE_CSS, unsafe_allow_html=True)
-# Conditionally insert dark css
-if st.session_state["dark_mode"]:
-    st.markdown(DARK_CSS, unsafe_allow_html=True)
-
 # ---------------------- SIDEBAR (responsive + dark toggle + upload) --------------------
 with st.sidebar:
     st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
     st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Dark mode toggle
+    # Dark mode toggle (re-apply theme and rerun)
     dm = st.checkbox("🌙 Dark Mode", value=st.session_state["dark_mode"], key="dm_toggle")
     if dm != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = dm
-        # refresh page to apply theme css
+        # Apply the theme CSS and rerun to reflect changes
         st.rerun()
 
     # Add new singer (optional small form)
@@ -723,3 +755,17 @@ else:
 
 # sticky bottom player area (rendered regardless; its internal JS toggles display)
 show_sticky_player_if_playing()
+
+# ---------------------- Apply theme dynamically at end (so changes from sidebar toggle apply) ----------
+# Re-apply theme CSS after sidebar interactions (ensures immediate update on toggle)
+if st.session_state.get("dark_mode"):
+    st.markdown(DARK_CSS, unsafe_allow_html=True)
+else:
+    st.markdown(LIGHT_CSS, unsafe_allow_html=True)
+
+# ------------- NOTES -------------
+# Keyboard "B" toggle note:
+# Streamlit does not allow a reliable server-side session_state update from injected JS without a proper Streamlit component.
+# If you want keyboard toggle, I can provide a small Streamlit Component (single-file) to capture keypress and set session_state.
+# For now, use the sidebar checkbox to switch themes — it's stable and works across all Streamlit versions.
+
