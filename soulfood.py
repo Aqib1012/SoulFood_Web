@@ -1,42 +1,65 @@
 import streamlit as st
 from pathlib import Path
-import os, sqlite3, base64, time
+import os
+import sqlite3
+import base64
+import time
 from streamlit_autorefresh import st_autorefresh
 
 # ---------------------- CONFIG ----------------------
-st.set_page_config(page_title="SoulFood 🎵", layout="centered", page_icon="🎶")
+st.set_page_config(page_title="SoulFood 🎵", layout="wide", page_icon="🎶")
 
+# ---------------------- DATABASE ----------------------
 DB_PATH = "database.db"
+
 
 def get_conn():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
+
 def create_tables():
     conn = get_conn()
     c = conn.cursor()
-    c.execute("""
+    c.execute(
+        """
         CREATE TABLE IF NOT EXISTS songs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             singer TEXT,
             title TEXT,
             file_path TEXT
         )
-    """)
-    c.execute("""
+    """
+    )
+    c.execute(
+        """
         CREATE TABLE IF NOT EXISTS favorites (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             song_id INTEGER,
             FOREIGN KEY(song_id) REFERENCES songs(id)
         )
-    """)
+    """
+    )
     conn.commit()
     conn.close()
 
-# ---------------------- DATA ----------------------
+
+# ---------------------- DATA -----------------------
 SINGERS = {
-    "arnest_mall": {"name": "Arnest Mall", "image": "assets/arnest_mall.jpeg", "folder": "audio/arnest_mall"},
-    "arif_bhatti": {"name": "Arif Bhatti", "image": "assets/arif_bhatti.jpeg", "folder": "audio/arif_bhatti"},
-    "arslan_john": {"name": "Arslan John", "image": "assets/ArslanJohn.jpeg", "folder": "audio/arslan_john"},
+    "arnest_mall": {
+        "name": "Arnest Mall",
+        "image": "assets/arnest_mall.jpeg",
+        "folder": "audio/arnest_mall",
+    },
+    "arif_bhatti": {
+        "name": "Arif Bhatti",
+        "image": "assets/arif_bhatti.jpeg",
+        "folder": "audio/arif_bhatti",
+    },
+    "arslan_john": {
+        "name": "Arslan John",
+        "image": "assets/ArslanJohn.jpeg",
+        "folder": "audio/arslan_john",
+    },
 }
 
 BIBLE_VERSES = [
@@ -47,210 +70,567 @@ BIBLE_VERSES = [
     "🎵 Ephesians 5:19 — Singing and making melody in your heart to the Lord.",
     "🎵 Psalm 33:3 — Sing unto Him a new song; play skilfully with a loud noise.",
     "🎵 Psalm 147:7 — Sing unto the Lord with thanksgiving.",
+    "🎵 1 Chronicles 16:9 — Sing unto Him, sing psalms unto Him.",
+    "🎵 Psalm 13:6 — I will sing unto the Lord, because He hath dealt bountifully with me.",
     "🎵 Psalm 104:33 — I will sing unto the Lord as long as I live.",
 ]
 
-# ---------------------- AUTO SYNC ----------------------
+# ---------------------- AUTO SYNC ------------------
 def auto_sync_songs():
+    """
+    Scans singer folders for .mp3 files and inserts them into the songs table if missing.
+    """
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT file_path FROM songs")
-    existing = {row[0] for row in cur.fetchall()}
+    existing_files = {row[0] for row in cur.fetchall()}
+
     for key, data in SINGERS.items():
         folder = Path(data["folder"])
         folder.mkdir(parents=True, exist_ok=True)
         for file in folder.glob("*.mp3"):
-            path = str(file)
-            if path not in existing:
+            # normalize path string
+            file_str = str(file)
+            if file_str not in existing_files:
                 title = file.stem.replace("_", " ").title()
-                cur.execute("INSERT INTO songs (singer, title, file_path) VALUES (?, ?, ?)", (key, title, path))
+                cur.execute(
+                    "INSERT INTO songs (singer, title, file_path) VALUES (?, ?, ?)",
+                    (key, title, file_str),
+                )
     conn.commit()
     conn.close()
 
-# ---------------------- CSS ----------------------
-MOBILE_CSS = """
+
+# ---------------------- UTILS ----------------------
+def image_to_base64(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            b64 = base64.b64encode(img_file.read()).decode()
+        ext = Path(image_path).suffix.replace(".", "").lower()
+        if ext not in ("jpg", "jpeg", "png", "gif"):
+            ext = "jpeg"
+        return f"data:image/{ext};base64,{b64}"
+    except Exception:
+        return ""
+
+
+def get_songs_by_singer(singer_key):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, title, file_path FROM songs WHERE singer=?", (singer_key,))
+    songs = cur.fetchall()
+    conn.close()
+    return songs
+
+
+def get_favorites():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT song_id FROM favorites")
+    fav_ids = [row[0] for row in cur.fetchall()]
+    conn.close()
+    return fav_ids
+
+
+def toggle_favorite(song_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM favorites WHERE song_id=?", (song_id,))
+    exists = cur.fetchone()
+    if exists:
+        cur.execute("DELETE FROM favorites WHERE song_id=?", (song_id,))
+        msg = "💔 Removed from favorites"
+    else:
+        cur.execute("INSERT INTO favorites (song_id) VALUES (?)", (song_id,))
+        msg = "❤️ Added to favorites"
+    conn.commit()
+    conn.close()
+    try:
+        st.toast(msg)
+    except Exception:
+        st.success(msg)
+
+
+def delete_song(song_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT file_path FROM songs WHERE id=?", (song_id,))
+    file_path_row = cur.fetchone()
+    if file_path_row:
+        file_path = file_path_row[0]
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+    cur.execute("DELETE FROM songs WHERE id=?", (song_id,))
+    cur.execute("DELETE FROM favorites WHERE song_id=?", (song_id,))
+    conn.commit()
+    conn.close()
+    st.success("🗑️ Song deleted successfully!")
+    if st.session_state.get("playing_song") == song_id:
+        st.session_state["playing_song"] = None
+    st.rerun()
+
+
+def audio_data_url(file_path):
+    """Return a data URL for an mp3 file to use in an HTML audio tag (base64)."""
+    try:
+        with open(file_path, "rb") as f:
+            b = f.read()
+        b64 = base64.b64encode(b).decode()
+        return f"data:audio/mp3;base64,{b64}"
+    except Exception:
+        return None
+
+
+# ---------------------- CSS (RESPONSIVE) ------------------------
+BASE_CSS = """
 <style>
-body, .block-container {
-  max-width: 420px;
-  margin: auto;
-  padding: 8px;
-  background: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+:root {
+  --bg: #f6f9fc;
+  --card: #ffffff;
+  --muted: #5b6876;
+  --primary: #007BFF;
+  --text: #0b1730;
+  --accent: #0b63d4;
+  --shadow: rgba(2,6,23,0.06);
 }
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Header */
 .header {
-  text-align: center;
-  background: linear-gradient(135deg, #0b63d4, #5a9dfc);
-  color: white;
-  padding: 20px 10px;
-  border-radius: 16px;
-  margin-bottom: 10px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: 6px;
 }
-.title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.verse-box { font-size: 13px; font-style: italic; opacity: 0.9; }
+.title {
+    color: var(--primary);
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+/* Verse box */
+.verse-box {
+    background-color: #e8f0fe;
+    border-left: 5px solid var(--primary);
+    border-radius: 10px;
+    padding: 10px 15px;
+    text-align: center;
+    font-style: italic;
+    color: var(--text);
+    font-size: 16px;
+    margin-top: 8px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+/* Singer grid */
+.singer-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
+}
+
+.singer-card {
+    background-color: var(--card);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: all 0.28s ease;
+}
+.singer-card:hover {
+    transform: translateY(-6px);
+}
+
+/* Singer image circle */
+.singer-img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 12px;
+    border: 4px solid var(--primary);
+}
+
+/* Song grid */
+.song-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 6px;
+}
 
 .song-card {
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  padding: 10px 12px;
-  margin-bottom: 10px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    box-shadow: 0 8px 22px var(--shadow);
+    transition: transform .22s ease, box-shadow .22s ease;
 }
-.song-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
-.btn-row { display: flex; justify-content: space-around; gap: 8px; }
+.song-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px var(--shadow); }
+.song-card h4 { margin: 8px 0 10px 0; }
 
-button[kind=primary] {
-  width: 100%;
-}
+/* Buttons layout */
+.controls-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+.btn { padding:10px 12px; border-radius:10px; font-weight:600; border:none; cursor:pointer; }
+.btn-ghost { background: transparent; border: 1px solid rgba(0,0,0,0.06); }
+.btn-primary { background: var(--primary); color: #fff; }
 
-.bottom-nav {
-  position: fixed;
-  bottom: 90px;
-  left: 0;
-  right: 0;
-  height: 56px;
-  background: white;
-  border-radius: 16px 16px 0 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -6px 20px rgba(0,0,0,0.1);
-  z-index: 9999;
+/* Sidebar responsive: when screen small, sidebar becomes full width */
+@media (max-width: 700px) {
+    section[data-testid="stSidebar"] { position: relative !important; width: 100% !important; min-width: unset !important; z-index:9999; }
+    .singer-img { width: 120px; height:120px; }
 }
 
-.bottom-nav button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-
+/* Sticky bottom player */
 #sticky-player {
-  position: fixed;
-  bottom: 10px;
-  left: 8px;
-  right: 8px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  padding: 6px 10px;
-  display: none;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 9998;
+    position: fixed;
+    left: 15%;
+    right: 15%;
+    bottom: 18px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 40px var(--shadow);
+    display: none; /* toggled visible by JS/CSS when playing */
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
 }
+
+/* If viewport small, make player full width bottom */
+@media (max-width: 900px) {
+    #sticky-player { left: 8px; right: 8px; }
+}
+
+/* simple fade animation */
+@keyframes fadeIn { from { opacity: 0;} to { opacity: 1; } }
+
+.small-note { color: var(--muted); font-size:13px; margin-top:6px; text-align:center; }
+
 </style>
 """
 
-st.markdown(MOBILE_CSS, unsafe_allow_html=True)
-
-# ---------------------- HELPERS ----------------------
-def audio_data_url(file_path):
-    try:
-        with open(file_path, "rb") as f:
-            b = base64.b64encode(f.read()).decode()
-        return f"data:audio/mp3;base64,{b}"
-    except: return None
-
-# ---------------------- HEADER ----------------------
+# ---------------------- HEADER / PLAYER HELPERS ----------------------
 def show_header():
-    st_autorefresh(interval=30000, key="refresh_verse")
+    # Auto refresh every 30s for verse
+    st_autorefresh(interval=30000, key="verse_refresh")
+    st.markdown("<div class='header'>", unsafe_allow_html=True)
+    st.markdown("<h1 class='title'>🎵 SoulFood – پرستش 🎵</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='small-note'>Gospel Music Player — Mobile & Desktop friendly</p>", unsafe_allow_html=True)
     verse_index = int(time.time() / 30) % len(BIBLE_VERSES)
     verse = BIBLE_VERSES[verse_index]
-    st.markdown(f"<div class='header'><div class='title'>🎵 SoulFood – پرستش 🎵</div><div class='verse-box'>{verse}</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='verse-box'>{verse}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("---", unsafe_allow_html=True)
 
-# ---------------------- PLAYER ----------------------
-def show_player():
-    pid = st.session_state.get("playing_song")
-    if not pid: return
+
+def show_sticky_player_if_playing():
+    playing_id = st.session_state.get("playing_song")
+    if not playing_id:
+        return
+
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT title, file_path FROM songs WHERE id=?", (pid,))
+    cur.execute("SELECT title, file_path FROM songs WHERE id=?", (playing_id,))
     row = cur.fetchone()
     conn.close()
-    if not row: return
-    title, path = row
-    url = audio_data_url(path)
-    if not url: return
-    player = f"""
-    <div id="sticky-player" style="display:flex;">
-        <div style="font-weight:600;">🎧 {title}</div>
-        <audio id="sticky-audio" controls style="width:60%;">
-            <source src="{url}" type="audio/mp3">
-        </audio>
+    if not row:
+        return
+    title, file_path = row
+    if not file_path or not os.path.exists(file_path):
+        st.warning("⚠️ Playing file missing.")
+        return
+
+    data_url = audio_data_url(file_path)
+    if not data_url:
+        st.warning("⚠️ Cannot load audio for sticky player.")
+        return
+
+    # Render a minimal HTML audio player fixed at bottom with controls & title
+    player_html = f"""
+    <div id="sticky-player" style="display:flex; gap:12px; align-items:center; justify-content:center;">
+      <div style="font-weight:700; min-width:180px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+        🎧 {title}
+      </div>
+      <audio id="sticky-audio" controls style="max-width:70%; width:100%;">
+        <source src="{data_url}" type="audio/mp3">
+        Your browser does not support the audio element.
+      </audio>
+      <div style="min-width:80px; display:flex; gap:6px; justify-content:center;">
+        <button onclick="document.getElementById('sticky-audio').pause();" style="padding:8px;border-radius:8px;">⏸️</button>
+        <button onclick="document.getElementById('sticky-audio').play();" style="padding:8px;border-radius:8px;">▶️</button>
+      </div>
     </div>
-    <script>document.getElementById('sticky-player').style.display='flex';</script>
+    <script>
+      const p = document.getElementById('sticky-player');
+      if (p) p.style.display = 'flex';
+    </script>
     """
-    st.markdown(player, unsafe_allow_html=True)
+    st.markdown(player_html, unsafe_allow_html=True)
 
-# ---------------------- MAIN ----------------------
-create_tables(); auto_sync_songs()
 
-if "view" not in st.session_state: st.session_state["view"] = "home"
-if "selected_singer" not in st.session_state: st.session_state["selected_singer"] = None
-if "playing_song" not in st.session_state: st.session_state["playing_song"] = None
-
-# ---------------------- PAGES ----------------------
-def show_home():
+# ---------------------- VIEWS ----------------------
+def show_singers():
     show_header()
-    st.markdown("### 🎤 Singers")
-    for key, s in SINGERS.items():
-        if st.button(f"🎶 {s['name']}", use_container_width=True):
+    st.info(
+        """
+        📱 **Mobile tip:** Tap the top-left menu (≡) for the Admin Panel.  
+        Use the buttons under each singer to open their songs.
+        """,
+        icon="ℹ️",
+    )
+    st.markdown("<h3 style='text-align:center; margin-top:6px;'>Select a Singer</h3>", unsafe_allow_html=True)
+    st.markdown('<div class="singer-row">', unsafe_allow_html=True)
+
+    for key, data in SINGERS.items():
+        img_src = image_to_base64(data["image"]) if os.path.exists(data["image"]) else ""
+        st.markdown(
+            f"""
+            <div class="singer-card">
+                <img src="{img_src}" class="singer-img" alt="{data['name']}">
+                <h4 style="margin-bottom:6px;">{data['name']}</h4>
+                <div style="margin-top:8px;">
+                    <button onclick="document.querySelector('button[kind=play_{key}]')?.click()" class="btn btn-primary">🎤 Listen</button>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button(f"Open {data['name']}", key=f"open_{key}"):
             st.session_state["selected_singer"] = key
-            st.session_state["view"] = "songs"
-            st.experimental_rerun()
+            st.session_state["show_favorites"] = False
+            st.session_state["playing_song"] = None
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-def show_songs():
-    key = st.session_state["selected_singer"]
-    show_header()
-    songs = get_conn().execute("SELECT id, title, file_path FROM songs WHERE singer=?", (key,)).fetchall()
-    if st.button("⬅️ Back", use_container_width=True):
-        st.session_state["view"] = "home"
-        st.experimental_rerun()
-    for sid, title, path in songs:
-        st.markdown(f"<div class='song-card'><div class='song-title'>{title}</div></div>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("▶️ Play", key=f"play_{sid}"):
-                st.session_state["playing_song"] = sid
-                st.experimental_rerun()
-        with c2:
-            if st.button("🗑️ Delete", key=f"del_{sid}"):
-                os.remove(path)
-                get_conn().execute("DELETE FROM songs WHERE id=?", (sid,))
-                get_conn().commit()
-                st.experimental_rerun()
 
-def show_upload():
+def show_songs(singer_key):
     show_header()
-    with st.form("upload", clear_on_submit=True):
-        singer = st.selectbox("🎤 Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"])
-        title = st.text_input("Song Title")
-        file = st.file_uploader("Upload MP3", type=["mp3"])
-        if st.form_submit_button("Upload"):
-            if not file or not title:
-                st.error("⚠️ Fill all fields")
+    songs = get_songs_by_singer(singer_key)
+    fav_ids = get_favorites()
+
+    st.markdown(f"<h3 style='text-align:center; margin-top:6px;'>{SINGERS[singer_key]['name']} Songs</h3>", unsafe_allow_html=True)
+
+    if st.button("⬅️ Back to Singers", key="back_top"):
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.session_state["show_favorites"] = False
+        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if not songs:
+        st.info("No songs found for this singer.")
+        return
+
+    st.markdown('<div class="song-grid">', unsafe_allow_html=True)
+
+    for song_id, title, file_path in songs:
+        fav_heart = "❤️" if song_id in fav_ids else "🤍"
+        st.markdown("<div class='song-card'>", unsafe_allow_html=True)
+        st.markdown(f"<h4>🎵 {title}</h4>", unsafe_allow_html=True)
+
+        # Show inline audio player only when playing this song (so grid stays small)
+        if st.session_state.get("playing_song") == song_id:
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, "rb") as f:
+                        st.audio(f.read(), format="audio/mp3")
+                except Exception:
+                    st.warning("⚠️ Failed to load audio file.")
             else:
-                dest = Path(SINGERS[singer]["folder"]) / file.name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                with open(dest, "wb") as f: f.write(file.getbuffer())
-                get_conn().execute("INSERT INTO songs (singer, title, file_path) VALUES (?, ?, ?)", (singer, title, str(dest)))
-                get_conn().commit()
-                st.success("✅ Uploaded!")
-                st.experimental_rerun()
+                st.warning("⚠️ Audio file missing!")
 
-# ---------------------- ROUTER ----------------------
-if st.session_state["view"] == "home": show_home()
-elif st.session_state["view"] == "songs": show_songs()
-elif st.session_state["view"] == "upload": show_upload()
+        # Buttons in a row
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            if st.session_state.get("playing_song") == song_id:
+                if st.button("⏸️ Stop", key=f"stop_{song_id}"):
+                    st.session_state["playing_song"] = None
+                    st.rerun()
+            else:
+                if st.button("▶️ Play", key=f"play_{song_id}"):
+                    st.session_state["playing_song"] = song_id
+                    st.rerun()
 
-# ---------------------- BOTTOM NAV ----------------------
-nav = """
-<div class='bottom-nav'>
-  <button onclick="window.location.reload()">🏠</button>
-  <button onclick="window.scrollTo(0,0)">❤️</button>
-  <button onclick="window.scrollTo(0,0)">⬆️</button>
-</div>
-"""
-st.markdown(nav, unsafe_allow_html=True)
-show_player()
+        with c2:
+            if st.button(fav_heart + " Favorite", key=f"fav_{song_id}"):
+                toggle_favorite(song_id)
+                st.rerun()
+
+        with c3:
+            if st.button("🗑️ Delete", key=f"del_{song_id}"):
+                delete_song(song_id)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def show_favorites_view():
+    show_header()
+    fav_ids = get_favorites()
+
+    if not fav_ids:
+        st.info("No favorites yet! Add some songs you love ❤️")
+        return
+
+    conn = get_conn()
+    cur = conn.cursor()
+    placeholders = ",".join(["?"] * len(fav_ids))
+    cur.execute(f"SELECT id, title, file_path FROM songs WHERE id IN ({placeholders})", fav_ids)
+    favs = cur.fetchall()
+    conn.close()
+
+    st.markdown("<h3 style='text-align:center; margin-top:6px;'>❤️ Your Favorite Songs</h3>", unsafe_allow_html=True)
+    if st.button("⬅️ Back to Singers"):
+        st.session_state["show_favorites"] = False
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.rerun()
+
+    for song_id, title, file_path in favs:
+        st.markdown(
+            f"<div style='text-align:center; background:var(--card); padding:15px; border-radius:12px; "
+            f"box-shadow: 0 8px 20px var(--shadow); margin-bottom:16px;'>"
+            f"<h4>🎵 {title}</h4>",
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state.get("playing_song") == song_id:
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, "rb") as f:
+                        st.audio(f.read(), format="audio/mp3")
+                except Exception:
+                    st.warning("⚠️ Failed to load audio file.")
+            else:
+                st.warning("⚠️ Audio file missing!")
+
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            if st.session_state.get("playing_song") == song_id:
+                if st.button("⏸️ Stop", key=f"stopfav_{song_id}"):
+                    st.session_state["playing_song"] = None
+                    st.rerun()
+            else:
+                if st.button("▶️ Play", key=f"playfav_{song_id}"):
+                    st.session_state["playing_song"] = song_id
+                    st.rerun()
+        with c2:
+            if st.button("💔 Remove", key=f"remove_fav_{song_id}"):
+                toggle_favorite(song_id)
+                st.rerun()
+            if st.button("🗑️ Delete", key=f"delete_fav_{song_id}"):
+                delete_song(song_id)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ---------------------- APP START ------------------
+create_tables()
+auto_sync_songs()
+
+if "selected_singer" not in st.session_state:
+    st.session_state["selected_singer"] = None
+if "show_favorites" not in st.session_state:
+    st.session_state["show_favorites"] = False
+if "playing_song" not in st.session_state:
+    st.session_state["playing_song"] = None
+
+# Insert base CSS
+st.markdown(BASE_CSS, unsafe_allow_html=True)
+
+# ---------------------- SIDEBAR (responsive + upload) --------------------
+with st.sidebar:
+    st.markdown("<div style='text-align:center; margin-bottom:8px;'>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:var(--primary);'>🎧 Admin Panel – Add New Song</h4>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Add new singer (optional small form)
+    with st.expander("➕ Add Singer (optional)", expanded=False):
+        new_singer_key = st.text_input("Singer key (slug, e.g., john_doe)")
+        new_singer_name = st.text_input("Singer name")
+        new_singer_img = st.text_input("Image path (optional)")
+        new_singer_folder = st.text_input("Folder path (optional, default audio/<key>)")
+        if st.button("Add Singer"):
+            if not new_singer_key or not new_singer_name:
+                st.error("Please provide both key and name.")
+            else:
+                key = new_singer_key.strip()
+                folder = new_singer_folder.strip() or f"audio/{key}"
+                SINGERS[key] = {"name": new_singer_name.strip(), "image": new_singer_img.strip() or "", "folder": folder}
+                Path(folder).mkdir(parents=True, exist_ok=True)
+                st.success(f"Added singer {new_singer_name}")
+                st.rerun()
+
+    st.markdown("---")
+
+    # Upload form
+    with st.form("upload_form", clear_on_submit=True):
+        singer_choice = st.selectbox("Select Singer", list(SINGERS.keys()), format_func=lambda x: SINGERS[x]["name"])
+        song_title = st.text_input("Song Title")
+        uploaded_file = st.file_uploader("Upload MP3 File", type=["mp3"])
+        submitted = st.form_submit_button("Upload Song")
+        if submitted:
+            if not uploaded_file:
+                st.error("⚠️ Please choose an MP3 file to upload.")
+            elif not song_title:
+                st.error("⚠️ Please enter the song title.")
+            else:
+                dest_folder = Path(SINGERS[singer_choice]["folder"])
+                dest_folder.mkdir(parents=True, exist_ok=True)
+                safe_name = uploaded_file.name.replace(" ", "_")
+                dest_path = dest_folder / safe_name
+                if dest_path.exists():
+                    stem = dest_path.stem
+                    suffix = dest_path.suffix
+                    dest_path = dest_folder / f"{stem}_{int(time.time())}{suffix}"
+                with open(dest_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                conn = get_conn()
+                cur = conn.cursor()
+                cur.execute("INSERT INTO songs (singer, title, file_path) VALUES (?, ?, ?)", (singer_choice, song_title, str(dest_path)))
+                conn.commit()
+                conn.close()
+                st.success(f"✅ Song '{song_title}' uploaded successfully!")
+                time.sleep(0.5)
+                auto_sync_songs()
+                st.rerun()
+
+    st.markdown("---")
+    if st.button("❤️ View Favorites"):
+        st.session_state["show_favorites"] = True
+        st.session_state["selected_singer"] = None
+        st.session_state["playing_song"] = None
+        st.rerun()
+
+# ---------------------- MAIN VIEW ------------------
+if st.session_state["show_favorites"]:
+    show_favorites_view()
+elif st.session_state["selected_singer"]:
+    show_songs(st.session_state["selected_singer"])
+else:
+    show_singers()
+
+# sticky bottom player area (rendered regardless; its internal JS toggles display)
+show_sticky_player_if_playing()
