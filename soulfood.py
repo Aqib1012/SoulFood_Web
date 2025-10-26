@@ -207,14 +207,16 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 /* Page container adjusted for mobile app feel */
-.block-container {
-  padding-top: 10px;
+ .block-container {
+  padding-top: 70px;  /* ✅ added spacing for top navbar */
   padding-left: 10px;
   padding-right: 10px;
   max-width: 430px;
   margin-left: auto;
   margin-right: auto;
 }
+
+
 
 /* App header */
 .app-header {
@@ -275,7 +277,7 @@ html, body, [data-testid="stAppViewContainer"] {
 
 /* Floating sticky player (rounded pill) */
 #sticky-player {
-  position:fixed; left:50%; transform:translateX(-50%); bottom:78px;
+  position:fixed; left:50%; transform:translateX(-50%); bottom:20px;
   width:92%; max-width:430px; border-radius:999px; padding:10px 14px;
   background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   box-shadow: 0 18px 40px rgba(2,6,23,0.6);
@@ -284,12 +286,24 @@ html, body, [data-testid="stAppViewContainer"] {
 #sticky-player .title { font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* Bottom navigation */
+ /* Top navigation */
 .bottom-nav {
-  position:fixed; left:50%; transform:translateX(-50%); bottom:12px;
-  width:94%; max-width:430px; display:flex; justify-content:space-between; gap:8px;
-  padding:8px; border-radius:18px; background: linear-gradient(90deg, rgba(3,7,18,0.7), rgba(3,7,18,0.55));
-  box-shadow: 0 10px 30px rgba(2,6,23,0.7); z-index:10000;
+  position:fixed;
+  top:8px;
+  left:50%;
+  transform:translateX(-50%);
+  width:94%;
+  max-width:430px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px;
+  border-radius:18px;
+  background: linear-gradient(90deg, rgba(3,7,18,0.7), rgba(3,7,18,0.55));
+  box-shadow: 0 10px 30px rgba(2,6,23,0.7);
+  z-index:10000;
 }
+
 .bottom-btn {
   flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
   padding:10px 8px; border-radius:12px; cursor:pointer; color:var(--muted);
