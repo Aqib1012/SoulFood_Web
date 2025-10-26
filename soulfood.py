@@ -622,20 +622,39 @@ def set_tab(tab_name):
     st.experimental_rerun()
 
 # 🔹 Bottom navigation (native-like)
+# 🔹 Bottom navigation (native-like)
 nav_html = f"""
 <div class="bottom-nav">
-  <button class="bottom-btn {'active' if active_tab == 'home' else ''}" onclick="document.querySelector('button[kind=nav_home]')?.click()">🏠 Home</button>
-  <button class="bottom-btn {'active' if active_tab == 'favorites' else ''}" onclick="document.querySelector('button[kind=nav_fav]')?.click()">❤️ Fav</button>
-  <button class="bottom-btn {'active' if active_tab == 'admin' else ''}" onclick="document.querySelector('button[kind=nav_admin]')?.click()">➕ Admin</button>
+  <button class="bottom-btn {'active' if active_tab == 'home' else ''}" onclick="document.getElementById('nav_home_btn').click()">🏠 Home</button>
+  <button class="bottom-btn {'active' if active_tab == 'favorites' else ''}" onclick="document.getElementById('nav_fav_btn').click()">❤️ Fav</button>
+  <button class="bottom-btn {'active' if active_tab == 'admin' else ''}" onclick="document.getElementById('nav_admin_btn').click()">➕ Admin</button>
 </div>
 """
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# 🔹 Invisible buttons for navigation (must come after set_tab)
-if st.button("nav_home", key="nav_home", help="nav home", on_click=lambda: set_tab("home")):
-    pass
-if st.button("nav_fav", key="nav_fav", help="nav fav", on_click=lambda: set_tab("favorites")):
-    pass
-if st.button("nav_admin", key="nav_admin", help="nav admin", on_click=lambda: set_tab("admin")):
-    pass
+# 🔹 Truly invisible navigation buttons
+hide_style = """
+<style>
+.hidden-nav-btn {
+    visibility:hidden;
+    position:absolute;
+    height:0;
+    width:0;
+    overflow:hidden;
+}
+</style>
+"""
+st.markdown(hide_style, unsafe_allow_html=True)
+
+# Hidden Streamlit buttons (they handle navigation logic)
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.button("", key="nav_home_btn", on_click=lambda: set_tab("home"), help="nav home", type="primary", use_container_width=True)
+with col2:
+    st.button("", key="nav_fav_btn", on_click=lambda: set_tab("favorites"), help="nav fav", type="primary", use_container_width=True)
+with col3:
+    st.button("", key="nav_admin_btn", on_click=lambda: set_tab("admin"), help="nav admin", type="primary", use_container_width=True)
+
+# Hide them
+st.markdown("<div class='hidden-nav-btn'></div>", unsafe_allow_html=True)
 
